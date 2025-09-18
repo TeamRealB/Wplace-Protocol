@@ -1608,7 +1608,7 @@ function Q8() {
 
 ### Pawtect
 
-Pawtect是一个wplace最新最热引入的基于Rust编写的WASM模块，用于在请求之前对请求体进行签名，再通过请求头一同发送到服务器。
+Pawtect是一个wplace最新最热引入的基于Rust编写的WASM模块，其样本可以在[pawtect_wasm_bg.wasm](files/pawtect_wasm_bg.wasm)查看，用于在请求之前对请求体进行签名，再通过请求头一同发送到服务器。
 
 部分用户不会启用此检查，如果想知道某个账号是否启用了此检查，需要先请求[/me](#get-me)获得其中的`experiments`信息，如果`variant`是disabled请求时候只需要传入`x-pawtect-variant: disabled`即可否则需要传入`x-pawtect-variant`和`x-pawtect-token`两个请求头。
 
