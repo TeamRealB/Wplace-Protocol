@@ -1732,6 +1732,8 @@ function hn() {
     return n;
 }
 
+// 需要自己添加post逻辑
+// 示例传入：https://backend.wplace.live/s0/pixel/1/1, {}, 1
 function postPaw(url, bodyStr, userId) {
     loadWASM();
     if (m.__wbindgen_start) m.__wbindgen_start();
