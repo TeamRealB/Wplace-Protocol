@@ -238,7 +238,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
     "name": "username",
     // boolean: 是否需要手机号验证，如果是则会在访问时弹出手机号验证窗口
     "needsPhoneVerification": false,
-    // string: 头像URL或base64，需要根据前缀判断（例如https://)
+    // string: 头像URL或base64，需要根据前缀判断（例如data:image/png;base64,)
     "picture": "",
     // int: 已经绘制的像素数量
     "pixelsPainted": 114514,
@@ -288,6 +288,93 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 ```
 
 > 请求体不合法
+
+### GET `/me/profile-pictures`
+
+获得头像列表
+
+一个人可以有多个头像（添加一个`20,000`Droplets），然后可以随时换头像列表中的任何一个头像
+
+#### 请求
+
+* 需要 `j` 完成认证
+
+#### 成功返回
+
+```jsonc
+// array: 所有头像
+[
+    {
+        // int: 头像ID
+        "id": 0,
+        // string: 头像URL或者Base64，可以通过是否以data:image/png;base64,开头判断
+        "url": ""
+    }
+]
+```
+
+> 如果你没有任何头像则会返回空的
+
+### POST `/me/profile-picture/change`
+
+更换头像
+
+#### 请求
+
+* 需要 `j` 完成认证
+
+#### 示例请求
+
+更换已有自定义头像
+
+```jsonc
+{
+    // int: 头像ID，需要确保你添加了这个头像
+	"pictureId": 1
+}
+```
+
+重置头像
+
+```jsonc
+{}
+```
+
+> 请求空的JsonObject可以重置头像
+
+#### 成功返回
+
+```jsonc
+{
+	"success": true
+}
+```
+
+### POST `/me/profile-picture`
+
+上传头像
+
+#### 请求
+
+* 需要 `j` 完成认证
+* 请求体为Multipart File：`image`
+
+#### 成功返回
+
+```jsonc
+{
+	"success": true
+}
+```
+
+#### 错误返回
+
+```jsonc
+{
+	"error": "Forbidden",
+	"status": 403
+}
+```
 
 ### GET `/alliance`
 
@@ -370,7 +457,984 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 
 > Alliance名字已经被占用
 
+```jsonc
+{
+    "error": "Forbidden",
+    "status": 403
+}
+```
+
+> 已有一个Alliance但是仍然尝试创建，正常情况下不会触发。
+
+### POST `/alliance/update-description`
+
+更新Alliance简介
+
+#### 请求
+
+* 需要 `j` 完成认证
+
+#### 成功返回
+
+```jsonc
+{
+	"success": true
+}
+```
+
+#### 错误返回
+
+```jsonc
+{
+	"error": "Forbidden",
+	"status": 403
+}
+```
+
+> 没有Alliance或权限不是admin
+
+### GET `/alliance/invites`
+
+获得Alliance的邀请链接
+
+#### 请求
+
+* 需要 `j` 完成认证
+
+#### 成功返回
+
+```jsonc
+// array: Alliance邀请链接，通常只有一个且格式为UUID
+[
+    "fe7c9c32-e95a-4f5f-a866-554cde2149c3"
+]
+```
+
+#### 错误返回
+
+```jsonc
+{
+	"error": "Forbidden",
+	"status": 403
+}
+```
+
+> 没有Alliance或权限不是admin
+
+### GET `/alliance/join/{invite}`
+
+通过Invite UUID加入Alliance，获得Invite UUID参阅[/alliance/invites](#get-allianceinvites)
+
+#### 请求
+
+* 需要 `j` 完成认证
+* URL中的{invite}参数为邀请UUID
+    - 示例URL（设置为中国国旗）：`/alliance/join/fe7c9c32-e95a-4f5f-a866-554cde2149c3`
+
+#### 成功返回
+
+```jsonc
+{
+    "success": "true"
+}
+```
+
+> 如果加入的目标和你已有的Alliance一致，也会返回成功
+
+#### 错误返回
+
+```jsonc
+{
+    "error": "Not Found",
+    "status": 404
+}
+```
+
+> 没有找到目标Alliance
+
+```jsonc
+{
+  "error": "Already Reported",
+  "status": 208
+}
+```
+
+> 已经加入了一个Alliance
+
+### POST `/alliance/update-headquarters`
+
+更新Alliance的总部（Headquarters）
+
+#### 请求
+
+* 需要 `j` 完成认证
+
+#### 示例请求
+
+```jsonc
+{
+	"latitude": 22.537655528880563,
+	"longitude": 114.0274942853182
+}
+```
+
+#### 成功返回
+
+```jsonc
+{
+	"success": true
+}
+```
+
+#### 错误返回
+
+
+```jsonc
+{
+	"error": "Forbidden",
+	"status": 403
+}
+```
+
+> 没有Alliance或权限不是admin
+
+### GET `/alliance/members/{page}`
+
+获得Alliance成员列表，有分页系统，有可能需要分多页获取如果成员超过50个
+
+#### 请求
+
+* 需要 `j` 完成认证
+* URL中的{page}参数为页码，从0开始
+    - 示例URL（获得第一页）：`/alliance/members/0`
+
+#### 成功返回
+
+```jsonc
+{
+    // array: 一页最多50个
+	"data": [{
+	    // int: 用户ID
+		"id": 1,
+		// string: 用户名
+		"name": "cubk'",
+		// enum: 权限
+		// admin/memeber
+		"role": "admin"
+	}, {
+		"id": 1,
+		"name": "SillyBitch",
+		"role": "admin"
+	}, {
+		"id": 1,
+		"name": "cubk",
+		"role": "member"
+	}],
+	// boolean: 是否还有下一页
+	"hasNext": true
+}
+```
+
+#### 错误返回
+
+```jsonc
+{
+	"error": "Forbidden",
+	"status": 403
+}
+```
+
+> 没有Alliance或权限不是admin
+
+
+### GET `/alliance/members/banned/{page}`
+
+获得Alliance已经拉黑的成员列表，有分页系统，有可能需要分多页获取如果成员超过50个
+
+已经拉黑的成员无法再加入Alliance
+
+#### 请求
+
+* 需要 `j` 完成认证
+* URL中的{page}参数为页码，从0开始
+    - 示例URL（获得第一页）：`/alliance/members/banned/0`
+
+#### 成功返回
+
+```jsonc
+{
+	"data": [{
+		"id": 1,
+		"name": "SuckMyDick"
+	}],
+	"hasNext": false
+}
+```
+
+> 和普通成员接口大致一致，但是没有`role`，因为已经拉黑就不在alliance里了
+
+#### 错误返回
+
+```jsonc
+{
+	"error": "Forbidden",
+	"status": 403
+}
+```
+
+> 没有Alliance或权限不是admin
+
+### POST `/alliance/give-admin`
+
+将一个成员提升为Admin，无法降级
+
+#### 请求
+
+* 需要 `j` 完成认证
+
+#### 示例请求
+
+```jsonc
+{
+    // int: 需要提升的用户ID
+	"promotedUserId": 1
+}
+```
+
+#### 成功返回
+
+本接口没有返回，响应码是`200`即成功
+
+#### 错误返回
+
+```jsonc
+{
+	"error": "Forbidden",
+	"status": 403
+}
+```
+
+> 没有Alliance或权限不是admin
+
+### POST `/alliance/ban`
+
+踢出并拉黑一个成员
+
+拉黑之后如果不解除拉黑成员无法重新加入
+
+#### 请求
+
+* 需要 `j` 完成认证
+
+#### 示例请求
+```jsonc
+{
+    // int: 需要踢出或拉黑的用户ID
+	"bannedUserId": 1
+}
+```
+
+#### 成功返回
+
+```jsonc
+{
+	"success": true
+}
+```
+
+#### 错误返回
+
+```jsonc
+{
+	"error": "Forbidden",
+	"status": 403
+}
+```
+
+> 没有Alliance或权限不是admin
+
+### POST `/alliance/unban`
+
+解除拉黑一个成员，解除之后他不会自动回到Alliance，只是可以重新加入了而已。
+
+#### 请求
+
+* 需要 `j` 完成认证
+
+#### 示例请求
+
+```jsonc
+{
+    // int: 需要解除拉黑的用户ID
+	"unbannedUserId": 1
+}
+```
+
+#### 成功返回
+
+```jsonc
+{
+	"success": true
+}
+```
+
+#### 错误返回
+
+```jsonc
+{
+	"error": "Forbidden",
+	"status": 403
+}
+```
+
+> 没有Alliance或权限不是admin
+
+### GET `/alliance/leaderboard/{mode}`
+
+获得Alliance内玩家排行榜，仅限前50个。
+
+#### 请求
+
+* 需要 `j` 完成认证
+* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
+    - `today`
+    - `week`
+    - `month`
+    - `all-time`
+* 示例URL（今日排行榜）：`/alliance/leaderboard/today`
+
+#### 成功返回
+
+```jsonc
+[
+  {
+    // int: 用户ID
+    "userId": 10815100,
+    // string: 用户名
+    "name": "做爱",
+    // int: 旗帜ID，旗帜列表参阅附录
+    "equippedFlag": 0,
+    // int: 已绘制像素数量
+    "pixelsPainted": 32901,
+    // 最后一次绘制的经纬度，如果用户关闭了showLastPixel则不会有这两个字段
+    "lastLatitude": 22.527739206672393,
+    "lastLongitude": 114.02762695312497
+  },
+  {
+    "userId": 10850297,
+    "name": "尹永铉",
+    "equippedFlag": 0,
+    "pixelsPainted": 31631
+  }
+]
+```
+
+### POST `/favorite-location`
+
+收藏一个位置
+
+#### 请求
+
+* 需要 `j` 完成认证
+
+#### 示例请求
+
+```jsonc
+{
+	"latitude": 22.5199456234827,
+	"longitude": 114.02428677802732
+}
+```
+
+#### 成功返回
+
+```jsonc
+{
+    // int: 收藏ID
+	"id": 1,
+	"success": true
+}
+```
+
+#### 错误返回
+
+```jsonc
+{
+  "error": "Forbidden",
+  "status": 403
+}
+```
+
+> 收藏数量超过maxFavoriteLocations
+
+
+### POST `/favorite-location/delete`
+
+取消收藏位置
+
+#### 请求
+
+* 需要 `j` 完成认证
+
+#### 示例请求
+
+```jsonc
+{
+    // int: 收藏ID
+	"id": 1
+}
+```
+
+#### 成功返回
+
+```jsonc
+{
+    "success": true
+}
+```
+
+> 传入任何ID即使是没有收藏的或者不存在的也会返回成功
+
+### POST `/purchase`
+
+购买物品，相关定义请阅读[商店](#商店)小节
+
+#### 请求
+
+* 需要 `j` 完成认证
+
+#### 示例请求
+
+```jsonc
+{
+    // object: 固定字段product
+	"product": {
+	    // int: 物品id
+		"id": 100,
+		// int: 购买数量，对于Paint Charges/Max Charge可以购买多个
+		"amount": 1,
+		// int: 变体值，部分物品存在变体，如果没有变体不需要这个值
+		"variant": 49
+	}
+}
+```
+
+#### 成功返回
+
+```jsonc
+{
+	"success": true
+}
+```
+
+#### 错误返回
+
+所有错误在本接口返回的均一样
+
+```json
+{"error":"Forbidden","status":403}{"success":true}
+```
+
+> 可能是巴西人毒品吃多了或者被足球精准命中后脑勺了导致大脑不太好使这里写错了但是这个响应体确实他妈的长这样，可能需要额外处理
+> ![proof](/images/bad-resp.png)
+
+### POST `/flag/equip/{id}`
+
+设置展示旗帜
+
+#### 请求
+
+* 需要 `j` 完成认证
+* URL中的{id}参数为旗帜ID，所有旗帜ID和旗帜解锁检查参阅[旗帜](#旗帜)和[附录](#全部旗帜)
+    - 示例URL（设置为中国国旗）：`/flag/equip/45`
+
+#### 成功返回
+
+```jsonc
+{
+	"success": true
+}
+```
+
+#### 错误返回
+
+```jsonc
+{
+	"error": "Forbidden",
+	"status": 403
+}
+```
+
+> 未解锁旗帜
+
+### GET `/leaderboard/region/{mode}/{country}`
+
+获得某个国家/地区的地区绘制排行榜（仅前50个）
+
+#### 请求
+
+* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
+    - `today`
+    - `week`
+    - `month`
+    - `all-time`
+* URL中的`country`为地区ID，对应的表请参阅[附录](#全部旗帜)
+* 示例URL（中国今天的城市排行榜）：`/leaderboard/region/today/45`
+
+#### 成功返回：
+
+```jsonc
+[
+  {
+    // int: 排行榜ID，仅用于内部
+    "id": 111006,
+    // int: 地区名字
+    "name": "Yongzhou",
+    // int: 地区ID
+    "cityId": 4205,
+    // int: 地区编号
+    "number": 1,
+    // int: 国家/地区ID
+    "countryId": 45,
+    // int: 已绘制数量
+    "pixelsPainted": 389274,
+    // 最后一次绘制的经纬度
+    "lastLatitude": 26.59347856637528,
+    "lastLongitude": 111.63313476562497
+  },
+  {
+    "id": 112043,
+    "name": "Fuzhou",
+    "cityId": 4381,
+    "number": 11,
+    "countryId": 45,
+    "pixelsPainted": 307461,
+    "lastLatitude": 25.21710750136907,
+    "lastLongitude": 120.43010742187496
+  }
+}
+```
+
+### GET `/leaderboard/country/{mode}`
+
+获得所有国家/地区排行榜，仅限前50个
+
+#### 请求
+
+* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
+    - `today`
+    - `week`
+    - `month`
+    - `all-time`
+* 示例URL（今天的国家地区排行榜）：`/leaderboard/country/today`
+
+#### 成功返回
+
+````jsonc
+[
+  {
+    // int: 国家地区ID，参阅附录获得全部
+    // 此处的235对应美国
+    "id": 235,
+    "pixelsPainted": 40724480
+  },
+  {
+    "id": 181,
+    "pixelsPainted": 39226725
+  }
+]
+````
+
+### GET `/leaderboard/player/{mode}`
+
+获得全球玩家排行榜，仅限前50个
+
+#### 请求
+
+* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
+    - `today`
+    - `week`
+    - `month`
+    - `all-time`
+* 示例URL（今天的玩家排行榜）：`/leaderboard/player/today`
+
+#### 成功返回
+
+```jsonc
+[
+  {
+    // int: 用户ID
+    "id": 8883244,
+    // string: 用户名
+    "name": "Tightmatt Cousin",
+    // int: Alliance ID，如果是0则代表没有
+    "allianceId": 0,
+    // string: Alliance名字，如果没有则是空字符串
+    "allianceName": "",
+    // int: 已装备旗帜，旗帜列表参考附录，如果没有则是0
+    "equippedFlag": 155,
+    // int: 已绘制的像素数量
+    "pixelsPainted": 64451,
+    // string: 头像URL或Base64，可通过是否以data:image/png;base64,开头判断，如果没有头像则没有这个字段
+    "picture": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbklEQVR42qxTQQrAMAhbpN/e+/as7LKBjLRGOkGQ0mhM0zg2w2nAJ2XAAC8x7gpwVqCgi8zkvFhqAEEdKW2x6IoaxfSZqHjrYYhFcYfOM3IGythoGAeqHouJ33Mq1ihc13Vuq9k/sf2d7wAAAP//U48dVi53OIQAAAAASUVORK5CYII=",
+    // string: discord用户名
+    "discord": "co."
+  },
+  {
+    "id": 2235271,
+    "name": "( ˘ ³˘) ",
+    "allianceId": 0,
+    "allianceName": "",
+    "equippedFlag": 0,
+    "pixelsPainted": 39841,
+    "discord": "bittenonce"
+  }
+]
+```
+
+### GET `/leaderboard/alliance/{mode}`
+
+获得全球Alliance排行榜，仅限前50个。
+
+#### 请求
+
+* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
+    - `today`
+    - `week`
+    - `month`
+    - `all-time`
+* 示例URL（今天的Alliance排行榜）：`/leaderboard/alliance/today`
+
+#### 成功返回：
+
+```jsonc
+[
+  {
+    // int: Alliance ID
+    "id": 165,
+    // string: Alliance名字
+    "name": "bapo",
+    // int: 已绘制像素数量
+    "pixelsPainted": 771030
+  },
+  {
+    "id": 29246,
+    "name": "BROP Enterprises",
+    "pixelsPainted": 507885
+  }
+]
+```
+
+### GET `/leaderboard/region/players/{city}/{mode}`
+
+获得某个城市的玩家排行榜，仅限前50个。
+
+#### 请求
+
+* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
+    - `today`
+    - `week`
+    - `month`
+    - `all-time`
+* URL中的`city`是城市ID，暂时没有一个明确的列表对应，因为城市太他妈多了。
+* 示例URL（深圳玩家总排行榜）：`/leaderboard/region/players/114594/all-time`
+
+#### 成功返回
+
+```jsonc
+[
+  {
+    "id": 1997928,
+    "name": "宵崎奏",
+    "allianceId": 593067,
+    "allianceName": "匠の心",
+    "pixelsPainted": 189818,
+    "equippedFlag": 98,
+    "picture": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA+ElEQVR42mJiQAP/ocBh8pP/GgHzwGwQDWOjq2dE1+w45SnDi727GCSc3VAUgsRg4MaGJLg+RpAmRkZGRphmQgDdICZkm7EpRtYAAiCXIbsOxWZkp2PzBjaXMDGQAbaJq8INJ8oAZG+ANCMDJnT/wfy90uAWmN6fI41hiNfL23CDmNBtAml8rsnIoFffDhe/vj4RLAaSR9YMNwBmCwhomumgaEQGIMORXUFyIMJcBdOM04APbQkExUDeASUkRvSEBJK4lMaGYcD1U1cYwi+owQMalpwZkfOBZuB8uAZQoIFpwywGt0nGDG9EkrDmBYoBE6UGAAIAAP//HhiiI4AXzBcAAAAASUVORK5CYII=",
+    "discord": "思い出を取り戻して"
+  },
+  {
+    "id": 7730493,
+    "name": "$_0_U_/\\/\\_4",
+    "allianceId": 597328,
+    "allianceName": "義工",
+    "pixelsPainted": 109076,
+    "equippedFlag": 98,
+    "picture": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAB+ElEQVR42pRTTWgTURD+9rmKBUPbg1RBDyslNAEriU3F3pTUS0FoQREEL3pQ8SwqRRREUPDkT3qwF6EIgvFUDyZ4EFKhG6om4IoElCpCBOmGoKiJrHwTJ27MJX7wmG/nzZv53sxbOygsBI1aAGJ9vwXlikrgY+mFJ/z4vomufaOOeyvPZZNJwmi4H3EsuVfWCn7gXxglDCj3/5QktEwoqlLbRAW/+/xvUkCL0BqtTuysbeiqEBsYbMk/Oy3c89dkaRLD7HpXtUxERQRlaw94MMy51iXizqWJREycN7OPUfbeYfW7DzMyhM8bf4l/ynGAT19x8doczk0fkriZeAJVtwLr9eIt6eJC9imOzuzHsDUgKvQ7NjkCuFVRwh4QVMGJUIGtjsPboxgvvpWAenqPHG4jNYSkW0Wk+FI+C0FEfMitwXBMqWYEoxfSclDvx8pUE05CLI9FZTLaYLNcetURVD9/sCWbY0pv6ZiI7mkjS7kyjJXcgf8FJzR76o4oMZwACR294vLDLBxnq7xSeUiF+UVx9IovH1bFuna9leD9YB+o5O6RG+2g+euPUHlwXxa5gjG7N20WfmL2tmXHp85YJw+MtX8xXuVK5rQ8XcXwH1u6mhc7ProLmWf5vz/T3JOipZ3l/DUwDC/3Bs3JqPDMUl7OkP8OAAD//6QS5QpYPtjuAAAAAElFTkSuQmCC",
+    "discord": "soumasandesu"
+  }
+]
+```
+
+> 字段定义参阅[/leaderboard/player/{mode}](#get-leaderboardplayermode)
+
+### GET `/leaderboard/region/alliances/{city}/{mode}`
+
+获得某个城市的Alliance排行榜，仅限前50个。
+
+#### 请求
+
+* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
+    - `today`
+    - `week`
+    - `month`
+    - `all-time`
+* URL中的`city`是城市ID，暂时没有一个明确的列表对应，因为城市太他妈多了。
+* 示例URL（深圳Alliance总排行榜）：`/leaderboard/region/alliances/114594/all-time`
+
+#### 成功返回
+
+```jsonc
+[
+  {
+    "id": 1,
+    "name": "Team ReaIB",
+    "pixelsPainted": 856069
+  },
+  {
+    "id": 1,
+    "name": "Team RealB",
+    "pixelsPainted": 658302
+  }
+]
+```
+> 字段定义参阅[/leaderboard/alliance/{mode}](#get-leaderboardalliancemode)
+
+### GET `/s0/tile/random`
+
+获得一个随机的已经绘制的像素
+
+#### 成功返回
+
+```jsonc
+{
+    // 像素位置（相对于Tile）
+	"pixel": {
+		"x": 764,
+		"y": 676
+	},
+	// Tile位置
+	"tile": {
+		"x": 1781,
+		"y": 749
+	}
+}
+```
+
+Tile和像素位置之间的关系，参阅[瓦片](#瓦片)
+
+### GET `/s0/pixel/{tileX}/{tileY}?x={x}&y={y}`
+
+获得某个像素点的信息
+
+#### 请求
+
+* URL中的tileX和tileY需要为瓦片坐标，相关信息参阅[瓦片](#瓦片)
+* x和y参数为像素相对坐标，需要在1024范围内
+* 示例URL（深圳的某个位置）：`/s0/pixel/1672/892?x=668&y=265`
+
+#### 成功返回
+
+已绘制
+
+```jsonc
+{
+    // object: 绘制者信息
+	"paintedBy": {
+	    // int: 用户ID
+		"id": 1,
+		// string: 用户名
+		"name": "崔龙海",
+		// int: Alliance ID，如果没有则是0
+		"allianceId": 1,
+		// string: Alliance名字，如果没有则是空字符串
+		"allianceName": "Team ReaIB",
+		// int: 旗帜ID，对应关系参阅附录
+		"equippedFlag": 0
+	},
+	// object: 区域信息
+	"region": {
+	    // int: 信息ID，内部使用
+		"id": 114594,
+		// int: 城市ID
+		"cityId": 4263,
+		// int: 城市名字
+		"name": "Shenzhen",
+		// int: 区域编号
+		"number": 2,
+		// int: 国家/地区ID
+		"countryId": 45
+	}
+}
+```
+
+未绘制（透明）
+
+```jsonc
+{
+	"paintedBy": {
+		"id": 0,
+		"name": "",
+		"allianceId": 0,
+		"allianceName": "",
+		"equippedFlag": 0
+	},
+	"region": {
+		"id": 114594,
+		"cityId": 4263,
+		"name": "Shenzhen",
+		"number": 2,
+		"countryId": 45
+	}
+}
+```
+
+### GET `/files/s0/tiles/{tileX}/{tileY}.png`
+
+获得某个[瓦片](#瓦片)的贴图
+
+#### 请求
+
+* URL中的tileX和tileY需要为瓦片坐标，相关信息参阅[瓦片](#瓦片)
+* 示例URL：`/files/s0/tiles/1672/892.png`
+
+#### 成功返回
+
+![ex](/images/892.png)
+
+### POST `/s0/pixel/{tileX}/{tileY}`
+
+绘制像素
+
+需要添加反作弊请求头`x-pawtect-variant`和`x-pawtect-token`，请参阅[反作弊](#反作弊)
+
+#### 请求
+
+* 需要`j`完成认证
+* URL中的tileX和tileY需要为瓦片坐标，相关信息参阅[瓦片](#瓦片)
+* 示例URL：`/s0/pixel/1672/892`
+
+#### 示例请求
+
+```jsonc
+{
+    // array: 绘制的颜色ID，每个值对应一个像素
+	"colors": [49, 49, 49, 49, 49, 49],
+	// array: 绘制的坐标，格式为x, y, x, y，按照 (x, y) 成对出现
+	// 坐标顺序与 colors 一一对应，即第N个颜色应用于第N个坐标
+	"coords": [
+      140, 359, 
+      141, 359, 
+      141, 358, 
+      142, 358, 
+      143, 358, 
+      143, 357
+    ],
+    // string: 验证码token
+	"t": "0.xxxx",
+	// string: 浏览器指纹
+	"fp": "xxxx"
+}
+```
+
+> `colors`为绘制的颜色代码和`coords`一一对应，参阅[颜色](#颜色)和[附录](#全部颜色表)
+> 
+> 在绘制的颜色跨域多个[瓦片](#瓦片)时候会分多次请求
+
+#### 成功返回
+
+```jsonc
+{
+	"painted": 6
+}
+```
+
+#### 错误返回
+
+```jsonc
+{
+	"error": "refresh",
+	"status": 403
+}
+```
+
+> 验证码token或pawtect无效
+
+### POST `/report-user`
+
+<img src="/images/staffscreen.png" align="right" width="500">
+
+举报用户，举报时客户端会渲染一张截图，客服在查看时可以看到客户端的截图和现场截图
+
+客服可以看见被举报的用户的IP下的所有用户。
+
+
+#### 请求
+
+* 需要`j`完成认证
+* 请求体为multipart body
+    - `reportedUserId`: 举报的用户ID
+    - `latitude`: 纬度
+    - `longitude`: 经度
+    - `zoom`: 缩放
+    - `reason`: 举报原因
+    - `notes`: 举报文本，用户可以主动输入
+    - `image`: 客户端渲染的一张举报截图会显示在客服页面
+
+### 示例请求
+
+CURL
+
+```bash
+curl -X POST "https://backend.wplace.live/report-user" \
+  -H "Content-Type: multipart/form-data" \
+  -F "reportedUserId=1" \
+  -F "latitude=22.544484678446224" \
+  -F "longitude=114.09375473639432" \
+  -F "zoom=15.812584063490982" \
+  -F "reason=griefing" \
+  -F "notes=Messed up artworks for no reason" \
+  -F "image=@图片;type=image/jpeg"
+```
+
+原始请求体
+
+```text
+------boundary
+Content-Disposition: form-data; name="reportedUserId"
+
+1
+------boundary
+Content-Disposition: form-data; name="latitude"
+
+22.544484678446224
+------boundary
+Content-Disposition: form-data; name="longitude"
+
+114.09375473639432
+------boundary
+Content-Disposition: form-data; name="zoom"
+
+15.812584063490982
+------boundary
+Content-Disposition: form-data; name="reason"
+
+griefing
+------boundary
+Content-Disposition: form-data; name="notes"
+
+Messed up artworks for no reason
+------boundary
+Content-Disposition: form-data; name="image"; filename="report-1758232933710.jpeg"
+Content-Type: image/jpeg
+
+(binary file data)
+------boundary--
+```
+
 ## 反作弊
+
+### 
 
 ## 附录
 
@@ -394,6 +1458,15 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 ```
 
 > Cookie 已过期
+
+```jsonc
+{
+  "error": "Bad Request",
+  "status": 400
+}
+```
+
+> 请求格式错误
 
 ### 全部颜色表
 | 颜色 | ID | RGB | 是否付费 |
