@@ -2,7 +2,65 @@
 
 [Wplace](https://wplace.live)的技术栈、协议及接口的分析。
 
-## 概念
+免责声明：部分没有被引用的接口没有列出，因为随时有可能移除，如果有任何错误，请及时联系我。
+
+目录：
+
+- [概念与系统](#概念与系统)
+    - [地图](#地图)
+    - [瓦片](#瓦片)
+        - [计算对应经纬度](#计算对应经纬度)
+        - [相关接口](#相关接口)
+    - [颜色](#颜色)
+        - [相关接口](#相关接口-1)
+    - [旗帜](#旗帜)
+        - [相关接口](#相关接口-2)
+    - [等级](#等级)
+    - [商店](#商店)
+        - [相关接口](#相关接口-3)
+- [协议](#协议)
+    - [认证](#认证)
+    - [Cookie](#cookie)
+    - [GET `/me`](#get-me)
+    - [POST `/me/update`](#post-meupdate)
+    - [GET `/me/profile-pictures`](#get-meprofile-pictures)
+    - [POST `/me/profile-picture/change`](#post-meprofile-picturechange)
+    - [POST `/me/profile-picture`](#post-meprofile-picture)
+    - [GET `/alliance`](#get-alliance)
+    - [POST `/alliance`](#post-alliance)
+    - [POST `/alliance/update-description`](#post-allianceupdate-description)
+    - [GET `/alliance/invites`](#get-allianceinvites)
+    - [GET `/alliance/join/{invite}`](#get-alliancejoininvite)
+    - [POST `/alliance/update-headquarters`](#post-allianceupdate-headquarters)
+    - [GET `/alliance/members/{page}`](#get-alliancememberspage)
+    - [GET `/alliance/members/banned/{page}`](#get-alliancemembersbannedpage)
+    - [POST `/alliance/give-admin`](#post-alliancegive-admin)
+    - [POST `/alliance/ban`](#post-allianceban)
+    - [POST `/alliance/unban`](#post-allianceunban)
+    - [GET `/alliance/leaderboard/{mode}`](#get-allianceleaderboardmode)
+    - [POST `/favorite-location`](#post-favorite-location)
+    - [POST `/favorite-location/delete`](#post-favorite-locationdelete)
+    - [POST `/purchase`](#post-purchase)
+    - [POST `/flag/equip/{id}`](#post-flagequipid)
+    - [GET `/leaderboard/region/{mode}/{country}`](#get-leaderboardregionmodecountry)
+    - [GET `/leaderboard/country/{mode}`](#get-leaderboardcountrymode)
+    - [GET `/leaderboard/player/{mode}`](#get-leaderboardplayermode)
+    - [GET `/leaderboard/alliance/{mode}`](#get-leaderboardalliancemode)
+    - [GET `/leaderboard/region/players/{city}/{mode}`](#get-leaderboardregionplayerscitymode)
+    - [GET `/leaderboard/region/alliances/{city}/{mode}`](#get-leaderboardregionalliancescitymode)
+    - [GET `/s0/tile/random`](#get-s0tilerandom)
+    - [GET `/s0/pixel/{tileX}/{tileY}?x={x}&y={y}`](#get-s0pixeltilextileyxxyy)
+    - [GET `/files/s0/tiles/{tileX}/{tileY}.png`](#get-filess0tilestilextileypng)
+    - [POST `/s0/pixel/{tileX}/{tileY}`](#post-s0pixeltilextiley)
+    - [POST `/report-user`](#post-report-user)
+- [反作弊](#反作弊)
+- [附录](#附录)
+    - [通用API错误](#通用api错误)
+    - [全部颜色表](#全部颜色表)
+    - [BitMap Java实现](#bitmap-java实现)
+    - [全部旗帜](#全部旗帜)
+
+## 概念与系统
 
 _大多数命名为主观命名，不代表和源码或其他wplace项目中命名一致_
 
@@ -18,7 +76,6 @@ _大多数命名为主观命名，不代表和源码或其他wplace项目中命�
 
 地图的总像素数量为 `4,398,046,511,104`（约 4.4 trillion / 4.4 兆 / 4.4 万亿）。
 
-
 ### 瓦片
 
 > 关键字：`Tile / Chunk`
@@ -26,6 +83,8 @@ _大多数命名为主观命名，不代表和源码或其他wplace项目中命�
 瓦片是wplace渲染画布的最小单位。每个瓦片在服务端是一张`1024×1024`的PNG图像，包含`1,048,576`个像素。
 
 瓦片对应的数据类型为`Vec2i`，即 `x` 和 `y`。
+
+API中提到的相对坐标也就是从所在瓦片的0开始坐标。
 
 #### 计算对应经纬度
 
@@ -48,6 +107,11 @@ double lat = Math.toDegrees(latRad);
 其中的`lon`和`lat`即为经纬度的值
 
 > 公式参考自：[Slippy map tilenames](https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames)
+
+#### 相关接口
+
+- [/s0/pixel/{tileX}/{tileY}?x={x}&y={y}](#get-s0pixeltilextileyxxyy)
+- [/s0/pixel/{tileX}/{tileY}](#post-s0pixeltilextiley)
 
 ### 颜色
 
@@ -79,6 +143,7 @@ if (colorId < 32) { // 跳过前32因为前32个颜色是免费的
 #### 相关接口
 
 - [/me](#get-me)
+- [/purchase](#post-purchase)
 
 ### 旗帜
 
@@ -124,8 +189,12 @@ BitMap可读的Java代码参见[附录](#bitmap-java实现)
 #### 相关接口
 
 - [/me](#get-me)
+- [/purchase](#post-purchase)
+- [/flag/equip/{id}](#post-flagequipid)
 
 ### 等级
+
+> 关键字：`Level`
 
 等级可以根据已绘制的像素计算
 
@@ -138,6 +207,23 @@ double level = Math.pow(totalPainted, 0.65) / base;
 每升一级会获得`500`droplets和增加`2`最大像素
 
 ### 商店
+
+> 关键字：`Store / Purchase`
+
+商店可以通过游戏内的虚拟货币Droplet购买物品，以下是物品列表
+
+| 物品ID  | 物品名字              | 价格（Droplet） | Variants    |
+|-------|-------------------|-------------|-------------|
+| `70`  | +5 Max. Charges   | `500`       | 无           |
+| `80`  | +30 Paint Charges | `500`       | 无           |
+| `100` | 解锁付费颜色            | `2000`      | [颜色ID](#颜色) |
+| `110` | 解锁旗帜              | `20000`     | [旗帜ID](#旗帜) |
+
+#### 相关接口
+
+- [/purchase](#post-purchase)
+
+其他物品ID预留给了充值物品（现金支付）
 
 ## 协议
 
@@ -181,9 +267,9 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 
 ```jsonc
 {
-    // int: 工会ID
+    // int: Alliance ID
     "allianceId": 1, 
-    // enum: 工会权限
+    // enum: Alliance 权限
     // admin/member
     "allianceRole": "admin",
     // boolean: 是否被封禁
@@ -393,7 +479,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 
 ```jsonc
 {
-	// string: 工会介绍
+	// string: Alliance介绍
 	"description": "CCB",
 	// object: 总部（Headquarters）
 	"hq": {
@@ -565,6 +651,15 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 ```
 
 > 已经加入了一个Alliance
+
+```jsonc
+{
+	"error": "Forbidden",
+	"status": 403
+}
+```
+
+> 已被这个Alliance拉黑
 
 ### POST `/alliance/update-headquarters`
 
@@ -1111,7 +1206,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
     - `all-time`
 * 示例URL（今天的Alliance排行榜）：`/leaderboard/alliance/today`
 
-#### 成功返回：
+#### 成功返回
 
 ```jsonc
 [
@@ -1346,6 +1441,10 @@ Tile和像素位置之间的关系，参阅[瓦片](#瓦片)
 > `colors`为绘制的颜色代码和`coords`一一对应，参阅[颜色](#颜色)和[附录](#全部颜色表)
 > 
 > 在绘制的颜色跨域多个[瓦片](#瓦片)时候会分多次请求
+> 
+> 验证码token请参阅[Turnstile](#turnstile---验证码)
+> `fp`请参阅[浏览器指纹](#fingerprintjs---浏览器指纹)
+> `x-pawtect-token`和`x-pawtect-variant`请参阅[pawtect](#pawtect)
 
 #### 成功返回
 
@@ -1440,7 +1539,212 @@ Content-Type: image/jpeg
 
 ## 反作弊
 
-### 
+对于[/s0/pixel/{tileX}/{tileY}](#post-s0pixeltilextiley)接口wplace添加了多个反作弊措施防止自动绘制和多账号。
+
+### `lp` - LocalStorage检测
+
+在登录之后Local Storage会写入`lp`字段，是一个base64编码的json，解码之后可以看到
+
+```json
+{
+	"userId": 1,
+	"time": 1758235291531
+}
+```
+
+其中包含了你的用户ID和登录时间戳，当你尝试提交绘制但是用户ID和Local Storage不一致时会提示你请勿使用多个账号绘制
+
+#### 解决方案
+
+- 对于不跑在浏览器上的机器人或者脚本无视即可
+- 使用多个[浏览器配置文件](https://support.google.com/chrome/answer/2364824)
+- 切换账号时候从Local Storage删除`lp`
+
+### Turnstile - 验证码
+
+<img src="/images/captcha.png" align="right" width="400">
+
+wplace使用了[Turnstile验证码](https://www.cloudflare.com/application-services/products/turnstile/)，并且每次绘制之后会在前端清除已经保存的验证码。
+
+通常来说这个验证码不会频繁弹出，但是如果服务器处于高负载启动了Under Attack模式则会在每次绘制之前弹出。
+
+#### 解决方案
+
+- 打码平台付费自动通过验证码API
+- 通过中间人代理抓取到`https://challenges.cloudflare.com`中的`cf-turnstile-response`字段（在服务器没有开启Under Attack模式的情况下）
+- 自己打开一个浏览器挂脚本自动刷然后通过浏览器插件发回客户端。
+
+### FingerprintJS - 浏览器指纹
+
+<img src="/images/FingerprintJS.png" align="right" width="400">
+
+wplace使用[FingerprintJS](https://fingerprint.com/)来上报`visitorId`（fp字段）来检测多账号和机器人。
+
+也就是通过`User-Agent`, `屏幕分辨率`, `时区`等数据检测浏览器是不是无头、匿名模式等。
+
+并且有`0.001%`的概率将你的信息卖给FingerprintJS的提供商。
+
+```javascript
+function Q8() {
+    if (!(window.__fpjs_d_m || Math.random() >= 0.001)) try {
+        var _ = new XMLHttpRequest;
+        _.open(
+            'get',
+            'https://m1.openfpcdn.io/fingerprintjs/v'.concat(I0, '/npm-monitoring'),
+            !0
+        ),
+            _.send()
+    } catch (s) {
+        console.error(s)
+    }
+}
+```
+
+> Wplace的JS中的真实代码，有0.001%的几率上传你的统计信息到FingerprintJS服务器
+
+#### 解决方案
+
+- 严格来说wplace暂时没有完全启用此检测因为只上传了一个`visitorId`（一个MD5值），理论上使用任何MD5都可以通过因为这个值无法从服务端校验，但是为了防止被检测到多账号建议使用`MD5(userId + salt)`
+
+### Pawtect
+
+Pawtect是一个wplace最新最热引入的基于Rust编写的WASM模块，用于在请求之前对请求体进行签名，再通过请求头一同发送到服务器。
+
+部分用户不会启用此检查，如果想知道某个账号是否启用了此检查，需要先请求[/me](#get-me)获得其中的`experiments`信息，如果`variant`是disabled请求时候只需要传入`x-pawtect-variant: disabled`即可否则需要传入`x-pawtect-variant`和`x-pawtect-token`两个请求头。
+
+#### 解决方案
+
+- 直接通过真实浏览器抓取（中间人代理或者浏览器插件）
+- 通过下方参考代码加载WASM模块实现签名（如果你的脚本使用nodejs开发）
+
+#### 参考代码
+
+```javascript
+let m;
+let memory;
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+let J = 0;
+
+function re(n, malloc, realloc) {
+    if (realloc === undefined) {
+        const s = textEncoder.encode(n);
+        const ptr = malloc(s.length, 1) >>> 0;
+        new Uint8Array(memory.buffer, ptr, s.length).set(s);
+        J = s.length;
+        return ptr;
+    }
+    let a = n.length;
+    let ptr = malloc(a, 1) >>> 0;
+    const mem = new Uint8Array(memory.buffer);
+    let i = 0;
+    for (; i < a; i++) {
+        const code = n.charCodeAt(i);
+        if (code > 0x7F) break;
+        mem[ptr + i] = code;
+    }
+    if (i !== a) {
+        if (i !== 0) n = n.slice(i);
+        ptr = realloc(ptr, a, a = i + n.length * 3, 1) >>> 0;
+        const view = new Uint8Array(memory.buffer, ptr + i, a - i);
+        const { written } = textEncoder.encodeInto(n, view);
+        i += written;
+        ptr = realloc(ptr, a, i, 1) >>> 0;
+    }
+    J = i;
+    return ptr;
+}
+
+function P(ptr, len) {
+    return textDecoder.decode(new Uint8Array(memory.buffer, ptr, len));
+}
+
+function fn(n) {
+    let e,
+        t;
+    try {
+        const a = re(n, m.__wbindgen_malloc, m.__wbindgen_realloc),
+            r = J,
+            o = m.get_pawtected_endpoint_payload(a, r);
+        return e = o[0],
+            t = o[1],
+            P(o[0], o[1])
+    } finally {
+        m.__wbindgen_free(e, t, 1)
+    }
+}
+
+async function loadWASM() {
+    const wasmBuffer = await readFile("./pawtect_wasm_bg.wasm");
+    const imports = hn();
+    const { instance } = await WebAssembly.instantiate(wasmBuffer, imports);
+    m = instance.exports;
+    memory = m.memory;
+}
+
+function hn() {
+    const n = {};
+    n.wbg = {};
+    n.wbg.__wbg_buffer_609cc3eee51ed158 = e => e.buffer;
+    n.wbg.__wbg_call_672a4d21634d4a24 = (e, t) => e.call(t);
+    n.wbg.__wbg_call_7cccdd69e0791ae2 = (e, t, a) => e.call(t, a);
+    n.wbg.__wbg_crypto_574e78ad8b13b65f = e => e.crypto;
+    n.wbg.__wbg_getRandomValues_b8f5dbd5f3995a9e = (e, t) => e.getRandomValues(t);
+    n.wbg.__wbg_msCrypto_a61aeb35a24c1329 = e => e.msCrypto;
+    n.wbg.__wbg_new_a12002a7f91c75be = e => new Uint8Array(e);
+    n.wbg.__wbg_newnoargs_105ed471475aaf50 = (e, t) => new Function(P(e, t));
+    n.wbg.__wbg_newwithbyteoffsetandlength_d97e637ebe145a9a = (e, t, a) =>
+        new Uint8Array(e, t >>> 0, a >>> 0);
+    n.wbg.__wbg_newwithlength_a381634e90c276d4 = e => new Uint8Array(e >>> 0);
+    n.wbg.__wbg_node_905d3e251edff8a2 = e => e.node;
+    n.wbg.__wbg_process_dc0fbacc7c1c06f7 = e => e.process;
+    n.wbg.__wbg_randomFillSync_ac0988aba3254290 = (e, t) => e.randomFillSync(t);
+    n.wbg.__wbg_require_60cc747a6bc5215a = () => module.require;
+    n.wbg.__wbg_set_65595bdd868b3009 = (e, t, a) => e.set(t, a >>> 0);
+    n.wbg.__wbg_static_accessor_GLOBAL_88a902d13a557d07 = () =>
+        typeof global === "undefined" ? null : global;
+    n.wbg.__wbg_static_accessor_GLOBAL_THIS_56578be7e9f832b0 = () =>
+        typeof globalThis === "undefined" ? null : globalThis;
+    n.wbg.__wbg_static_accessor_SELF_37c5d418e4bf5819 = () =>
+        typeof self === "undefined" ? null : self;
+    n.wbg.__wbg_static_accessor_WINDOW_5de37043a91a9c40 = () =>
+        typeof window === "undefined" ? null : window;
+    n.wbg.__wbg_subarray_aa9065fa9dc5df96 = (e, t, a) => e.subarray(t >>> 0, a >>> 0);
+    n.wbg.__wbg_versions_c01dfd4722a88165 = e => e.versions;
+    n.wbg.__wbindgen_init_externref_table = () => {
+        const e = m.__wbindgen_export_2;
+        const t = e.grow(4);
+        e.set(0, void 0);
+        e.set(t + 0, void 0);
+        e.set(t + 1, null);
+        e.set(t + 2, true);
+        e.set(t + 3, false);
+    };
+    n.wbg.__wbindgen_is_function = e => typeof e === "function";
+    n.wbg.__wbindgen_is_object = e => typeof e === "object" && e !== null;
+    n.wbg.__wbindgen_is_string = e => typeof e === "string";
+    n.wbg.__wbindgen_is_undefined = e => e === void 0;
+    n.wbg.__wbindgen_memory = () => m.memory;
+    n.wbg.__wbindgen_string_new = (e, t) => P(e, t);
+    n.wbg.__wbindgen_throw = (e, t) => {
+        throw new Error(P(e, t));
+    };
+    return n;
+}
+
+function postPaw(url, bodyStr, userId) {
+    loadWASM();
+    if (m.__wbindgen_start) m.__wbindgen_start();
+    m.set_user_id(userId);
+    const urlPtr = re(url, m.__wbindgen_malloc, m.__wbindgen_realloc);
+    m.request_url(urlPtr, J);
+    const loadPayload = m.get_load_payload();
+    const sign = fn(bodyStr);
+};
+
+```
+
+
 
 ## 附录
 
