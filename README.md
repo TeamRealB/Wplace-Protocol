@@ -8,13 +8,16 @@ _大多数命名为主观命名，不代表和源码或其他wplace项目中命�
 
 ### 地图
 
-> 关键字：`Map / Canvas / World`
-
 <img src="/images/projection.JPG" align="right" width="200">
+
+> 关键字：`Map / Canvas / World`
 
 地图指Wplace的整体画布。基于[墨卡托投影（Mercator Projection / Web Mercator）](https://en.wikipedia.org/wiki/Mercator_projection)渲染，地图采用[OpenFreeMap](https://openfreemap.org/)的Liberty Style。地图包含`2048x2048`也就是`4,194,304`个[瓦片](#瓦片)，瓦片在前端通过Canvas覆盖在地图之上。
 
+地图中大部分现实中没有属地/有争议的位置，例如太平洋被划分为了最近的陆地所属国家或地区。
+
 地图的总像素数量为 `4,398,046,511,104`（约 4.4 trillion / 4.4 兆 / 4.4 万亿）。
+
 
 ### 瓦片
 
