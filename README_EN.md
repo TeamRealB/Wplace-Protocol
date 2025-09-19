@@ -1,136 +1,134 @@
 # Wplace Protocol
 
-<a href="README_EN.md"><img src="https://img.shields.io/badge/translation-en-us"></a></p>
+Analysis of [Wplace](https://wplace.live)'s technology stack, protocols, and interfaces.
 
-[Wplace](https://wplace.live)的技术栈、协议及接口的分析。
+Disclaimer: Some unreferenced interfaces are not listed because they may be removed at any time. If there are any errors, please contact me in time.
 
-免责声明：部分没有被引用的接口没有列出，因为随时有可能移除，如果有任何错误，请及时联系我。
+Table of contents:
 
-目录：
+- [Concepts and Systems](#concepts-and-systems)
+  - [Map](#map)
+  - [Tiles](#tiles)
+    - [Calculating the corresponding longitude and latitude](#calculating-the-corresponding-longitude-and-latitude)
+    - [Related endpoints](#related-endpoints)
+  - [Colors](#colors)
+    - [Related endpoints](#related-endpoints-1)
+  - [Flags](#flags)
+    - [Related endpoints](#related-endpoints-2)
+  - [Levels](#levels)
+  - [Store](#store)
+    - [Related endpoints](#related-endpoints-3)
+- [Protocol](#protocol)
+  - [Authentication](#authentication)
+  - [Cookie](#cookie)
+  - [GET `/me`](#get-me)
+  - [POST `/me/update`](#post-meupdate)
+  - [GET `/me/profile-pictures`](#get-meprofile-pictures)
+  - [POST `/me/profile-picture/change`](#post-meprofile-picturechange)
+  - [POST `/me/profile-picture`](#post-meprofile-picture)
+  - [GET `/alliance`](#get-alliance)
+  - [POST `/alliance`](#post-alliance)
+  - [POST `/alliance/update-description`](#post-allianceupdate-description)
+  - [GET `/alliance/invites`](#get-allianceinvites)
+  - [GET `/alliance/join/{invite}`](#get-alliancejoininvite)
+  - [POST `/alliance/update-headquarters`](#post-allianceupdate-headquarters)
+  - [GET `/alliance/members/{page}`](#get-alliancememberspage)
+  - [GET `/alliance/members/banned/{page}`](#get-alliancemembersbannedpage)
+  - [POST `/alliance/give-admin`](#post-alliancegive-admin)
+  - [POST `/alliance/ban`](#post-allianceban)
+  - [POST `/alliance/unban`](#post-allianceunban)
+  - [GET `/alliance/leaderboard/{mode}`](#get-allianceleaderboardmode)
+  - [POST `/favorite-location`](#post-favorite-location)
+  - [POST `/favorite-location/delete`](#post-favorite-locationdelete)
+  - [POST `/purchase`](#post-purchase)
+  - [POST `/flag/equip/{id}`](#post-flagequipid)
+  - [GET `/leaderboard/region/{mode}/{country}`](#get-leaderboardregionmodecountry)
+  - [GET `/leaderboard/country/{mode}`](#get-leaderboardcountrymode)
+  - [GET `/leaderboard/player/{mode}`](#get-leaderboardplayermode)
+  - [GET `/leaderboard/alliance/{mode}`](#get-leaderboardalliancemode)
+  - [GET `/leaderboard/region/players/{city}/{mode}`](#get-leaderboardregionplayerscitymode)
+  - [GET `/leaderboard/region/alliances/{city}/{mode}`](#get-leaderboardregionalliancescitymode)
+  - [GET `/s0/tile/random`](#get-s0tilerandom)
+  - [GET `/s0/pixel/{tileX}/{tileY}?x={x}&y={y}`](#get-s0pixeltilextileyxxyy)
+  - [GET `/files/s0/tiles/{tileX}/{tileY}.png`](#get-filess0tilestilextileypng)
+  - [POST `/s0/pixel/{tileX}/{tileY}`](#post-s0pixeltilextiley)
+  - [POST `/report-user`](#post-report-user)
+- [Anti Cheat](#anti-cheat)
+- [Appendix](#appendix)
+  - [Common API Errors](#common-api-errors)
+  - [All Color Tables](#all-color-tables)
+  - [BitMap Java implementation](#bitmap-java-implementation)
+  - [All Flags](#all-flags)
 
-- [概念与系统](#概念与系统)
-    - [地图](#地图)
-    - [瓦片](#瓦片)
-        - [计算对应经纬度](#计算对应经纬度)
-        - [相关接口](#相关接口)
-    - [颜色](#颜色)
-        - [相关接口](#相关接口-1)
-    - [旗帜](#旗帜)
-        - [相关接口](#相关接口-2)
-    - [等级](#等级)
-    - [商店](#商店)
-        - [相关接口](#相关接口-3)
-- [协议](#协议)
-    - [认证](#认证)
-    - [Cookie](#cookie)
-    - [GET `/me`](#get-me)
-    - [POST `/me/update`](#post-meupdate)
-    - [GET `/me/profile-pictures`](#get-meprofile-pictures)
-    - [POST `/me/profile-picture/change`](#post-meprofile-picturechange)
-    - [POST `/me/profile-picture`](#post-meprofile-picture)
-    - [GET `/alliance`](#get-alliance)
-    - [POST `/alliance`](#post-alliance)
-    - [POST `/alliance/update-description`](#post-allianceupdate-description)
-    - [GET `/alliance/invites`](#get-allianceinvites)
-    - [GET `/alliance/join/{invite}`](#get-alliancejoininvite)
-    - [POST `/alliance/update-headquarters`](#post-allianceupdate-headquarters)
-    - [GET `/alliance/members/{page}`](#get-alliancememberspage)
-    - [GET `/alliance/members/banned/{page}`](#get-alliancemembersbannedpage)
-    - [POST `/alliance/give-admin`](#post-alliancegive-admin)
-    - [POST `/alliance/ban`](#post-allianceban)
-    - [POST `/alliance/unban`](#post-allianceunban)
-    - [GET `/alliance/leaderboard/{mode}`](#get-allianceleaderboardmode)
-    - [POST `/favorite-location`](#post-favorite-location)
-    - [POST `/favorite-location/delete`](#post-favorite-locationdelete)
-    - [POST `/purchase`](#post-purchase)
-    - [POST `/flag/equip/{id}`](#post-flagequipid)
-    - [GET `/leaderboard/region/{mode}/{country}`](#get-leaderboardregionmodecountry)
-    - [GET `/leaderboard/country/{mode}`](#get-leaderboardcountrymode)
-    - [GET `/leaderboard/player/{mode}`](#get-leaderboardplayermode)
-    - [GET `/leaderboard/alliance/{mode}`](#get-leaderboardalliancemode)
-    - [GET `/leaderboard/region/players/{city}/{mode}`](#get-leaderboardregionplayerscitymode)
-    - [GET `/leaderboard/region/alliances/{city}/{mode}`](#get-leaderboardregionalliancescitymode)
-    - [GET `/s0/tile/random`](#get-s0tilerandom)
-    - [GET `/s0/pixel/{tileX}/{tileY}?x={x}&y={y}`](#get-s0pixeltilextileyxxyy)
-    - [GET `/files/s0/tiles/{tileX}/{tileY}.png`](#get-filess0tilestilextileypng)
-    - [POST `/s0/pixel/{tileX}/{tileY}`](#post-s0pixeltilextiley)
-    - [POST `/report-user`](#post-report-user)
-- [反作弊](#反作弊)
-- [附录](#附录)
-    - [通用API错误](#通用api错误)
-    - [全部颜色表](#全部颜色表)
-    - [BitMap Java实现](#bitmap-java实现)
-    - [全部旗帜](#全部旗帜)
+## Concepts and Systems
 
-## 概念与系统
+_Most names are subjective and do not necessarily reflect the same naming conventions as in source code or other wplace projects._
 
-_大多数命名为主观命名，不代表和源码或其他wplace项目中命名一致_
-
-### 地图
+### Map
 
 <img src="/images/projection.JPG" align="right" width="200">
 
-> 关键字：`Map / Canvas / World`
+> Keywords: `Map / Canvas / World`
 
-地图指Wplace的整体画布。基于[墨卡托投影（Mercator Projection / Web Mercator）](https://en.wikipedia.org/wiki/Mercator_projection)渲染，地图采用[OpenFreeMap](https://openfreemap.org/)的Liberty Style。地图包含`2048x2048`也就是`4,194,304`个[瓦片](#瓦片)，瓦片在前端通过Canvas覆盖在地图之上。
+Map refers to the overall canvas of Wplace. The map is rendered in the [Mercator (Web Mercator)](https://en.wikipedia.org/wiki/Mercator_projection) projection, using the [OpenFreeMap](https://openfreemap.org/) map, which uses the Liberty Style. The map consists of `2048x2048` pixels, or `4,194,304` [tiles](#tiles), these tiles are overlaid on the map using Canvas.
 
-地图中大部分现实中没有属地/有争议的位置，例如太平洋被划分为了最近的陆地所属国家或地区。
+Most of the locations on the map are unclaimed/disputed in reality, such as the Pacific Ocean, which is divided into the countries or regions with the nearest landmass.
 
-地图的总像素数量为 `4,194,304,000,000`（约 4.1 trillion / 4.1 兆 / 4.1 万亿）。
+The total number of pixels in the map is `4,194,304,000,000` (approximately 4.1 trillion / 4.1 trillion / 4.1 trillion).
 
-### 瓦片
+### Tiles
 
-> 关键字：`Tile / Chunk`
+> Keywords: `Tile / Chunk`
 
-瓦片是wplace渲染画布的最小单位。每个瓦片在服务端是一张`1000×1000`的PNG图像，包含`1,000,000`个像素。
+A tile is the smallest unit of the wplace rendering canvas. Each tile is a `1000×1000` PNG image on the server, containing `1,000,000` pixels.
 
-瓦片对应的数据类型为`Vec2i`，即 `x` 和 `y`。
+The data type corresponding to the tile is `Vec2i`, namely `x` and `y`.
 
-API中提到的相对坐标也就是从所在瓦片的0开始坐标。
+The relative coordinates mentioned in the API are the coordinates starting from 0 of the tile.
 
-#### 计算对应经纬度
+#### Calculating the corresponding longitude and latitude
 
-整个[地图](#地图)在横向与纵向的瓦片数量均为`2048`。通过这个即可计算出`Zoom`值：
+The entire [map](#map) has `2048` tiles in both the horizontal and vertical directions. The `Zoom` value can be calculated using this:
 
 ```java
-int n = 2048; // 瓦片数量
-int z = (int) (Math.log(n) / Math.log(2)); // 通过换底公式求出Zoom
+int n = 2048; // Number of tiles
+int z = (int) (Math.log(n) / Math.log(2)); // Calculate Zoom using the change of base formula.
 ```
 
-经过这个公式计算，可以求出zoom**约为**`11`，随后即可使用下列算法计算经纬度：
+Using this formula, we can calculate the zoom to be **approximately** `11`, and then use the following algorithm to calculate the latitude and longitude:
 
 ```java
-double n = Math.pow(2.0, 11); // zoom 为 11
+double n = Math.pow(2.0, 11); // zoom is 11
 double lon = (x + 0.5) / n * 360.0 - 180.0;
 double latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 0.5) / n)));
 double lat = Math.toDegrees(latRad);
 ```
 
-其中的`lon`和`lat`即为经纬度的值
+Among them, `lon` and `lat` are the values of latitude and longitude
 
-> 公式参考自：[Slippy map tilenames](https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames)
+> Formula reference from: [Slippy map tilenames](https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames)
 
-#### 相关接口
+#### Related Endpoints
 
 - [/s0/pixel/{tileX}/{tileY}?x={x}&y={y}](#get-s0pixeltilextileyxxyy)
 - [/s0/pixel/{tileX}/{tileY}](#post-s0pixeltilextiley)
 
-### 颜色
+### Colors
 
-> 关键字：`Color / Palette`
+> Keywords: `Color / Palette`
 
-Wplace提供了64种颜色，前32种为免费颜色，后32种每个需要`2,000`Droplets解锁。
+Wplace provides 64 colors, the first 32 are free colors, and the latter 32 each require `2,000` Droplets to unlock.
 
-对于颜色是否已经解锁，前端通过位掩码检查 （Bitmask Check）来检查`extraColorsBitmap`，`extraColorsBitmap`为前端获得用户资料接口返回的Json中的一个字段。
+To check if a color is unlocked, the frontend uses a bitmask check to examine `extraColorsBitmap`, which is a field in the JSON returned by the user profile interface.
 
-其检查逻辑为：
+The checking logic is:
 
 ```java
 int extraColorsBitmap = 0;
-int colorId = 63; // 需要检查的颜色ID
+int colorId = 63; // Color ID to check
 boolean unlocked;
 
-if (colorId < 32) { // 跳过前32因为前32个颜色是免费的
+if (colorId < 32) { // Skip the first 32 as the first 32 colors are free
     unlocked = true;
 } else {
     int mask = 1 << (colorId - 32);
@@ -138,22 +136,22 @@ if (colorId < 32) { // 跳过前32因为前32个颜色是免费的
 }
 ```
 
-> 免责声明：此代码为笔者根据Wplace中的混淆过的JS代码分析得出的Java代码，而非原始代码。
+> Disclaimer: This code is Java code derived by the author based on analysis of the obfuscated JS code in Wplace, not the original code.
 
-对于颜色代码，请检查[附录](#全部颜色表)
+For color codes, please check [Appendix](#all-color-tables)
 
-#### 相关接口
+#### Related Endpoints
 
 - [/me](#get-me)
 - [/purchase](#post-purchase)
 
-### 旗帜
+### Flags
 
-> 关键字：`Flag`
+> Keywords: `Flag`
 
-Wplace包含251种旗帜，购买旗帜之后可以让你在对应的地区绘制时候节省10%的像素，一个旗帜的价格为`20,000`Droplets。
+Wplace contains 251 flags. After purchasing a flag, you can save 10% pixels when drawing in the corresponding region. The price of a flag is `20,000` Droplets.
 
-对于旗帜是否解锁通过一个自定义的BitMap来实现，以下是这个BitMap的JS代码：
+Whether a flag is unlocked is implemented through a custom BitMap. Here is the JS code for this BitMap:
 
 ```js
 class Tt {
@@ -182,62 +180,62 @@ class Tt {
 }
 ```
 
-BitMap可读的Java代码参见[附录](#bitmap-java实现)
+Readable Java code for BitMap can be found in [Appendix](#bitmap-java-implementation)
 
-前端通过用户资料接口获得`flagsBitmap`字段之后，通过Base64解码为Bytes然后传入BitMap读取某个旗帜ID是否已解锁。
+After the frontend obtains the `flagsBitmap` field through the user profile interface, it decodes it from Base64 to Bytes and then passes it to BitMap to read whether a flag ID has been unlocked.
 
-对于全部旗帜代码，请参考[附录](#全部旗帜)
+For all flag codes, please refer to [Appendix](#all-flags)
 
-#### 相关接口
+#### Related Endpoints
 
 - [/me](#get-me)
 - [/purchase](#post-purchase)
 - [/flag/equip/{id}](#post-flagequipid)
 
-### 等级
+### Levels
 
-> 关键字：`Level`
+> Keywords: `Level`
 
-等级可以根据已绘制的像素计算
+Levels can be calculated based on the painted pixels
 
 ```java
-double totalPainted = 1; // 已经绘制的像素数量
+double totalPainted = 1; // Number of pixels already painted
 double base = Math.pow(30, 0.65);
 double level = Math.pow(totalPainted, 0.65) / base;
 ```
 
-每升一级会获得`500`droplets和增加`2`最大像素
+Each level up will gain `500` droplets and increase `2` maximum pixels
 
-### 商店
+### Store
 
-> 关键字：`Store / Purchase`
+> Keywords: `Store / Purchase`
 
-商店可以通过游戏内的虚拟货币Droplet购买物品，以下是物品列表
+Items can be purchased with the in-game virtual currency Droplet in the store. The following is a list of items:
 
-| 物品ID  | 物品名字              | 价格（Droplet） | Variants    |
-|-------|-------------------|-------------|-------------|
-| `70`  | +5 Max. Charges   | `500`       | 无           |
-| `80`  | +30 Paint Charges | `500`       | 无           |
-| `100` | 解锁付费颜色            | `2000`      | [颜色ID](#颜色) |
-| `110` | 解锁旗帜              | `20000`     | [旗帜ID](#旗帜) |
+| Item ID | Item Name             | Price (Droplet) | Variants     |
+|---------|-----------------------|-----------------|--------------|
+| `70`    | +5 Max. Charges       | `500`           | None         |
+| `80`    | +30 Paint Charges     | `500`           | None         |
+| `100`   | Unlock Paid Colors    | `2000`          | [Color ID](#colors) |
+| `110`   | Unlock Flag           | `20000`         | [Flag ID](#flags) |
 
-#### 相关接口
+#### Related Endpoints
 
 - [/purchase](#post-purchase)
 
-其他物品ID预留给了充值物品（现金支付）
+Other item IDs are reserved for recharge items (cash payment)
 
-## 协议
+## Protocol
 
-如无特殊说明，URL主机为`backend.wplace.live`
+Unless otherwise specified, the URL host is `backend.wplace.live`
 
-对于常见的API错误，参阅[附录](#通用api错误)
+For common API errors, refer to [Appendix](#common-api-errors)
 
-### 认证
+### Authentication
 
-认证通过Cookie中的字段`j`实现，在登录之后，后端会将[Json Web Token](https://en.wikipedia.org/wiki/JSON_Web_Token)保存到Cookie中，后续请求`wplace.live`和`backend.wplace.live`都会携带这个Cookie
+Authentication is implemented through the field `j` in Cookie. After logging in, the backend will save the [Json Web Token](https://en.wikipedia.org/wiki/JSON_Web_Token) to the Cookie. Subsequent requests to `wplace.live` and `backend.wplace.live` will carry this Cookie.
 
-Token是一段被编码的文本，而不是一个普通的随机字符串，可以通过[jwt.io](https://jwt.io)或任何JWT工具解码得到一些信息。
+The token is an encoded text, not an ordinary random string. Some information can be decoded through [jwt.io](https://jwt.io) or any JWT tool.
 
 ```json
 {
@@ -249,63 +247,63 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-其中`exp`字段为过期时间戳，可以仅通过token得出过期时间。
+The `exp` field is the expiration timestamp, and the expiration time can be determined only through the token.
 
 ### Cookie
 
-通常来说请求接口只需要携带`j`一个Cookie即可，但是如果服务器处于高负载，开发者会开启[Under Attack模式](https://developers.cloudflare.com/fundamentals/reference/under-attack-mode/)，如果开启Under Attack模式需要额外携带一个有效的`cf_clearance`Cookie，否则会弹出Cloudflare质询。
+Generally speaking, only the `j` Cookie is required to request the interface. However, if the server is under high load, the developer will enable [Under Attack mode](https://developers.cloudflare.com/fundamentals/reference/under-attack-mode/). If Under Attack mode is enabled, an additional valid `cf_clearance` Cookie is required, otherwise a Cloudflare challenge will pop up.
 
-需要确保你在让自动程序发起请求时请求头中的大部分字段（如 `User-Agent`、`Accept-Language` 等）和你获得`cf_clearance`的浏览器一致，否则会验证不通过仍然会弹出质询。
+You need to ensure that when automatic programs initiate requests, most fields in the request headers (such as `User-Agent`, `Accept-Language`, etc.) are consistent with the browser you obtained `cf_clearance` from, otherwise the verification will not pass and the challenge will still pop up.
 
 ### GET `/me`
 
-获得用户信息
+Get user information
 
-#### 请求
+#### Request
 
-- 需要`j`完成认证
+- Requires authentication with `j`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
     // int: Alliance ID
     "allianceId": 1, 
-    // enum: Alliance 权限
+    // enum: Alliance permissions
     // admin/member
     "allianceRole": "admin",
-    // boolean: 是否被封禁
+    // boolean: Whether banned
     "banned": false,
-    // object: 像素信息
+    // object: Pixel information
     "charges": {
-        // int: 恢复像素的间隔，单位为毫秒，30000毫秒也就是30秒
+        // int: Recovery interval of pixels, in milliseconds, 30000 milliseconds is 30 seconds
         "cooldownMs": 30000,
-        // float: 剩余的像素
+        // float: Remaining pixels
         "count": 35.821833333333586,
-        // float: 最高像素数量
+        // float: Maximum number of pixels
         "max": 500
     },
-    // string: ISO-3166-1 alpha-2地区代码
-    // 参考：https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
+    // string: ISO-3166-1 alpha-2 region code
+    // Reference: https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
     "country": "JP",
-    // string: discord用户名
+    // string: Discord username
     "discord": "",
-    // int: 剩余droplets
+    // int: Remaining droplets
     "droplets": 75,
-    // int: 装备的旗帜
+    // int: Equipped flag
     "equippedFlag": 0,
-    // object: 灰度测试标记，其内部的意义不明确
-    // 例如其中的variant值为koala（考拉），不明确其内部意义，仅为一个代号。
-    // 但是会跟着请求头传出去，如果2025-09_pawtect的variant是disabled则不会发送pawtect-token
-    // 说明部分用户没有被启用新的安全机制
+    // object: A/B testing markers, the internal meaning is unclear
+    // For example, the variant value is koala, the internal meaning is unclear, just a code name.
+    // But it will be transmitted with the request header. If the variant of 2025-09_pawtect is disabled, pawtect-token will not be sent.
+    // This indicates that some users have not enabled the new security mechanism.
     "experiments": {
         "2025-09_pawtect": {
             "variant": "koala"
         }
     },
-    // int: extraColorsBitmap，参阅颜色小节了解其作用。
+    // int: extraColorsBitmap, see the color section to understand its function.
     "extraColorsBitmap": 0,
-    // array: 收藏的位置
+    // array: Favorite locations
     "favoriteLocations": [
         {
             "id": 1,
@@ -314,56 +312,56 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
             "longitude": 0.9266305280273432
         }
     ],
-    // string: 已解锁的旗帜列表，参阅旗帜小节了解其作用。
+    // string: List of unlocked flags, see the flag section to understand its function.
     "flagsBitmap": "AA==",
-    // enum: 一般不会出现，如果你有权限才会额外显示
+    // enum: Generally does not appear, only displayed if you have permissions
     // moderator/global_moderator/admin
     "role": "",
-    // int: 用户ID
+    // int: User ID
     "id": 1,
-    // boolean: 是否有购买，如果有则会在菜单显示订单列表
+    // boolean: Whether there is a purchase, if so, the order list will be displayed in the menu
     "isCustomer": false,
-    // float: 等级
+    // float: Level
     "level": 94.08496005353335,
-    // int: 最大的收藏数量，默认为15，暂时没有发现如何提升
+    // int: Maximum number of favorites, default is 15, no way to improve has been found yet
     "maxFavoriteLocations": 15,
-    // string: 用户名
+    // string: Username
     "name": "username",
-    // boolean: 是否需要手机号验证，如果是则会在访问时弹出手机号验证窗口
+    // boolean: Whether phone number verification is required, if so, a phone verification window will pop up when visiting
     "needsPhoneVerification": false,
-    // string: 头像URL或base64，需要根据前缀判断（例如data:image/png;base64,)
+    // string: Avatar URL or base64, need to judge according to the prefix (e.g. data:image/png;base64,)
     "picture": "",
-    // int: 已经绘制的像素数量
+    // int: Number of pixels already painted
     "pixelsPainted": 114514,
-    // boolean: 是否在alliance页面展示你最后一次绘制的位置
+    // boolean: Whether to display your last painted location on the alliance page
     "showLastPixel": true,
-    // string: 你的解除封禁时间戳，如果是1970年则意味着没有被封禁或者已经被永久封禁。
+    // string: Your unbanned timestamp, if it is 1970, it means you are not banned or have been permanently banned.
     "timeoutUntil": "1970-01-01T00:00:00Z"
 }
 ```
 
 ### POST `/me/update`
 
-更新当前用户的个人信息
+Update current user's personal information
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 请求示例
+#### Request Example
 
 ```jsonc
 {
-    // string：用户昵称
+    // string: User nickname
     "name": "cubk",
-    // boolean：是否在alliance展示最后一个像素
+    // boolean: Whether to display the last pixel on alliance
     "showLastPixel": true,
-    // discord用户名
+    // Discord username
     "discord": "_cubk"
 }
 ```
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -371,7 +369,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -380,62 +378,62 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 请求体不合法
+> Invalid request body
 
 ### GET `/me/profile-pictures`
 
-获得头像列表
+Get avatar list
 
-一个人可以有多个头像（添加一个`20,000`Droplets），然后可以随时换头像列表中的任何一个头像
+A person can have multiple avatars (add one `20,000` Droplets), and then can change to any avatar in the avatar list at any time
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
-// array: 所有头像
+// array: All avatars
 [
     {
-        // int: 头像ID
+        // int: Avatar ID
         "id": 0,
-        // string: 头像URL或者Base64，可以通过是否以data:image/png;base64,开头判断
+        // string: Avatar URL or Base64, can be judged by whether it starts with data:image/png;base64,
         "url": ""
     }
 ]
 ```
 
-> 如果你没有任何头像则会返回空的
+> If you don't have any avatars, an empty array will be returned
 
 ### POST `/me/profile-picture/change`
 
-更换头像
+Change avatar
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 示例请求
+#### Request Example
 
-更换已有自定义头像
+Change existing custom avatar
 
 ```jsonc
 {
-    // int: 头像ID，需要确保你添加了这个头像
+    // int: Avatar ID, you need to ensure you have added this avatar
 	"pictureId": 1
 }
 ```
 
-重置头像
+Reset avatar
 
 ```jsonc
 {}
 ```
 
-> 请求空的JsonObject可以重置头像
+> Requesting an empty JsonObject can reset the avatar
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -445,14 +443,14 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 
 ### POST `/me/profile-picture`
 
-上传头像
+Upload avatar
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
-* 请求体为Multipart File：`image`
+* Requires authentication with `j`
+* Request body is Multipart File: `image`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -460,7 +458,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -471,38 +469,38 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 
 ### GET `/alliance`
 
-获得Alliance信息
+Get Alliance information
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
-	// string: Alliance介绍
+	// string: Alliance introduction
 	"description": "CCB",
-	// object: 总部（Headquarters）
+	// object: Headquarters
 	"hq": {
 		"latitude": 22.535013525851937,
 		"longitude": 114.01152903098966
 	},
 	// int: Alliance ID
 	"id": 453128,
-	// int: 成员数量
+	// int: Number of members
 	"members": 263,
-	// string: 名字
+	// string: Name
 	"name": "Team RealB",
-	// string: 已绘制的总数
+	// string: Total painted
 	"pixelsPainted": 1419281,
-	// enum: 你的权限
-	// admin/memeber
+	// enum: Your permissions
+	// admin/member
 	"role": "admin"
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -511,35 +509,35 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 没有加入任何Alliance
+> Not joined any Alliance
 
 ### POST `/alliance`
 
-创建一个Alliance
+Create an Alliance
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 请求示例
+#### Request Example
 
 ```jsonc
 {
-    // string: Alliance名字，不能重名。
+    // string: Alliance name, cannot be duplicated.
 	"name": "Team RealB"
 }
 ```
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
-    // int: 创建完的Alliance ID
+    // int: Created Alliance ID
 	"id": 1
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -548,7 +546,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> Alliance名字已经被占用
+> Alliance name is already taken
 
 ```jsonc
 {
@@ -557,17 +555,17 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 已有一个Alliance但是仍然尝试创建，正常情况下不会触发。
+> Already have an Alliance but still trying to create, normally will not trigger.
 
 ### POST `/alliance/update-description`
 
-更新Alliance简介
+Update Alliance introduction
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -575,7 +573,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -584,26 +582,26 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 没有Alliance或权限不是admin
+> No Alliance or permission is not admin
 
 ### GET `/alliance/invites`
 
-获得Alliance的邀请链接
+Get Alliance invitation links
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
-// array: Alliance邀请链接，通常只有一个且格式为UUID
+// array: Alliance invitation links, usually only one and the format is UUID
 [
     "fe7c9c32-e95a-4f5f-a866-554cde2149c3"
 ]
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -612,19 +610,19 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 没有Alliance或权限不是admin
+> No Alliance or permission is not admin
 
 ### GET `/alliance/join/{invite}`
 
-通过Invite UUID加入Alliance，获得Invite UUID参阅[/alliance/invites](#get-allianceinvites)
+Join Alliance through Invite UUID, see [/alliance/invites](#get-allianceinvites) to get Invite UUID
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
-* URL中的{invite}参数为邀请UUID
-    - 示例URL（设置为中国国旗）：`/alliance/join/fe7c9c32-e95a-4f5f-a866-554cde2149c3`
+* Requires authentication with `j`
+* The {invite} parameter in the URL is the invitation UUID
+  - Example URL (set to Chinese flag): `/alliance/join/fe7c9c32-e95a-4f5f-a866-554cde2149c3`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -632,9 +630,9 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 如果加入的目标和你已有的Alliance一致，也会返回成功
+> If the target to join is consistent with your existing Alliance, it will also return success
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -643,7 +641,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 没有找到目标Alliance
+> Target Alliance not found
 
 ```jsonc
 {
@@ -652,7 +650,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 已经加入了一个Alliance
+> Already joined an Alliance
 
 ```jsonc
 {
@@ -661,17 +659,17 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 已被这个Alliance拉黑
+> Banned by this Alliance
 
 ### POST `/alliance/update-headquarters`
 
-更新Alliance的总部（Headquarters）
+Update Alliance headquarters
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 示例请求
+#### Request Example
 
 ```jsonc
 {
@@ -680,7 +678,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -688,7 +686,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 
 ```jsonc
@@ -698,30 +696,30 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 没有Alliance或权限不是admin
+> No Alliance or permission is not admin
 
 ### GET `/alliance/members/{page}`
 
-获得Alliance成员列表，有分页系统，有可能需要分多页获取如果成员超过50个
+Get Alliance member list, with pagination system, may need to get multiple pages if members exceed 50
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
-* URL中的{page}参数为页码，从0开始
-    - 示例URL（获得第一页）：`/alliance/members/0`
+* Requires authentication with `j`
+* The {page} parameter in the URL is the page number, starting from 0
+  - Example URL (get the first page): `/alliance/members/0`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
-    // array: 一页最多50个
+    // array: Up to 50 per page
 	"data": [{
-	    // int: 用户ID
+	    // int: User ID
 		"id": 1,
-		// string: 用户名
+		// string: Username
 		"name": "cubk'",
-		// enum: 权限
-		// admin/memeber
+		// enum: Permissions
+		// admin/member
 		"role": "admin"
 	}, {
 		"id": 1,
@@ -732,12 +730,12 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 		"name": "cubk",
 		"role": "member"
 	}],
-	// boolean: 是否还有下一页
+	// boolean: Whether there is a next page
 	"hasNext": true
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -746,22 +744,22 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 没有Alliance或权限不是admin
+> No Alliance or permission is not admin
 
 
 ### GET `/alliance/members/banned/{page}`
 
-获得Alliance已经拉黑的成员列表，有分页系统，有可能需要分多页获取如果成员超过50个
+Get the list of banned members of the Alliance, with a pagination system. If the members exceed 50, you may need to get multiple pages.
 
-已经拉黑的成员无法再加入Alliance
+Banned members cannot rejoin the Alliance.
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
-* URL中的{page}参数为页码，从0开始
-    - 示例URL（获得第一页）：`/alliance/members/banned/0`
+* Requires authentication with `j`
+* The {page} parameter in the URL is the page number, starting from 0
+  - Example URL (get the first page): `/alliance/members/banned/0`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -773,9 +771,9 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 和普通成员接口大致一致，但是没有`role`，因为已经拉黑就不在alliance里了
+> Similar to the regular member interface, but without `role`, because banned members are no longer in the alliance
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -784,30 +782,30 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 没有Alliance或权限不是admin
+> No Alliance or permission is not admin
 
 ### POST `/alliance/give-admin`
 
-将一个成员提升为Admin，无法降级
+Promote a member to Admin, cannot be demoted
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 示例请求
+#### Request Example
 
 ```jsonc
 {
-    // int: 需要提升的用户ID
+    // int: User ID to promote
 	"promotedUserId": 1
 }
 ```
 
-#### 成功返回
+#### Successful Return
 
-本接口没有返回，响应码是`200`即成功
+This interface has no return, response code is `200` for success
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -816,27 +814,27 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 没有Alliance或权限不是admin
+> No Alliance or permission is not admin
 
 ### POST `/alliance/ban`
 
-踢出并拉黑一个成员
+Kick out and ban a member
 
-拉黑之后如果不解除拉黑成员无法重新加入
+After banning, if the ban is not lifted, the member cannot rejoin
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 示例请求
+#### Request Example
 ```jsonc
 {
-    // int: 需要踢出或拉黑的用户ID
+    // int: User ID to kick out or ban
 	"bannedUserId": 1
 }
 ```
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -844,7 +842,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -853,26 +851,26 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 没有Alliance或权限不是admin
+> No Alliance or permission is not admin
 
 ### POST `/alliance/unban`
 
-解除拉黑一个成员，解除之后他不会自动回到Alliance，只是可以重新加入了而已。
+Unban a member. After unbanning, they will not automatically return to the Alliance, but can only rejoin.
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 示例请求
+#### Request Example
 
 ```jsonc
 {
-    // int: 需要解除拉黑的用户ID
+    // int: User ID to unban
 	"unbannedUserId": 1
 }
 ```
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -880,7 +878,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -889,36 +887,36 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 没有Alliance或权限不是admin
+> No Alliance or permission is not admin
 
 ### GET `/alliance/leaderboard/{mode}`
 
-获得Alliance内玩家排行榜，仅限前50个。
+Get the player leaderboard within the Alliance, limited to the top 50.
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
-* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
-    - `today`
-    - `week`
-    - `month`
-    - `all-time`
-* 示例URL（今日排行榜）：`/alliance/leaderboard/today`
+* Requires authentication with `j`
+* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+  - `today`
+  - `week`
+  - `month`
+  - `all-time`
+* Example URL (today's leaderboard): `/alliance/leaderboard/today`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 [
   {
-    // int: 用户ID
+    // int: User ID
     "userId": 10815100,
-    // string: 用户名
+    // string: Username
     "name": "做爱",
-    // int: 旗帜ID，旗帜列表参阅附录
+    // int: Flag ID, see appendix for flag list
     "equippedFlag": 0,
-    // int: 已绘制像素数量
+    // int: Number of painted pixels
     "pixelsPainted": 32901,
-    // 最后一次绘制的经纬度，如果用户关闭了showLastPixel则不会有这两个字段
+    // Latitude and longitude of the last paint, if the user has turned off showLastPixel, these two fields will not be present
     "lastLatitude": 22.527739206672393,
     "lastLongitude": 114.02762695312497
   },
@@ -933,13 +931,13 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 
 ### POST `/favorite-location`
 
-收藏一个位置
+Favorite a location
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 示例请求
+#### Request Example
 
 ```jsonc
 {
@@ -948,17 +946,17 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
-    // int: 收藏ID
+    // int: Favorite ID
 	"id": 1,
 	"success": true
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -967,27 +965,27 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 收藏数量超过maxFavoriteLocations
+> Number of favorites exceeds maxFavoriteLocations
 
 
 ### POST `/favorite-location/delete`
 
-取消收藏位置
+Unfavorite a location
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 示例请求
+#### Request Example
 
 ```jsonc
 {
-    // int: 收藏ID
+    // int: Favorite ID
 	"id": 1
 }
 ```
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -995,33 +993,33 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 传入任何ID即使是没有收藏的或者不存在的也会返回成功
+> Any ID will return success even if it is not favorited or does not exist
 
 ### POST `/purchase`
 
-购买物品，相关定义请阅读[商店](#商店)小节
+Purchase items, for related definitions please read the [Store](#store) section
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
+* Requires authentication with `j`
 
-#### 示例请求
+#### Request Example
 
 ```jsonc
 {
-    // object: 固定字段product
+    // object: Fixed field product
 	"product": {
-	    // int: 物品id
+	    // int: Item id
 		"id": 100,
-		// int: 购买数量，对于Paint Charges/Max Charge可以购买多个
+		// int: Purchase quantity, for Paint Charges/Max Charge multiple can be purchased
 		"amount": 1,
-		// int: 变体值，部分物品存在变体，如果没有变体不需要这个值
+		// int: Variant value, some items have variants, if no variant this value is not needed
 		"variant": 49
 	}
 }
 ```
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -1029,29 +1027,29 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-#### 错误返回
+#### Error Return
 
-所有错误在本接口返回的均一样
+All errors returned by this interface are the same
 
 ```json
 {"error":"Forbidden","status":403}{"success":true}
 ```
 
-> 可能是巴西人毒品吃多了或者被足球精准命中后脑勺了导致大脑不太好使这里写错了但是这个响应体确实他妈的长这样，可能需要额外处理
+> It's possible that the Brazilian person ate too many drugs or was hit in the back of the head by football causing brain damage and wrote this wrong, but this response body actually looks like this, may need additional processing
 > 
 > ![proof](/images/bad-resp.png)
 
 ### POST `/flag/equip/{id}`
 
-设置展示旗帜
+Set display flag
 
-#### 请求
+#### Request
 
-* 需要 `j` 完成认证
-* URL中的{id}参数为旗帜ID，所有旗帜ID和旗帜解锁检查参阅[旗帜](#旗帜)和[附录](#全部旗帜)
-    - 示例URL（设置为中国国旗）：`/flag/equip/45`
+* Requires authentication with `j`
+* The {id} parameter in the URL is the flag ID, all flag IDs and flag unlock checks refer to [Flags](#flags) and [Appendix](#all-flags)
+  - Example URL (set to Chinese flag): `/flag/equip/45`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -1059,7 +1057,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -1068,40 +1066,40 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-> 未解锁旗帜
+> Flag not unlocked
 
 ### GET `/leaderboard/region/{mode}/{country}`
 
-获得某个国家/地区的地区绘制排行榜（仅前50个）
+Get the regional painting leaderboard for a country/region (top 50 only)
 
-#### 请求
+#### Request
 
-* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
-    - `today`
-    - `week`
-    - `month`
-    - `all-time`
-* URL中的`country`为地区ID，对应的表请参阅[附录](#全部旗帜)
-* 示例URL（中国今天的城市排行榜）：`/leaderboard/region/today/45`
+* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+  - `today`
+  - `week`
+  - `month`
+  - `all-time`
+* The `country` in the URL is the region ID, the corresponding table please refer to [Appendix](#all-flags)
+* Example URL (China's city leaderboard today): `/leaderboard/region/today/45`
 
-#### 成功返回：
+#### Successful Return:
 
 ```jsonc
 [
   {
-    // int: 排行榜ID，仅用于内部
+    // int: Leaderboard ID, for internal use only
     "id": 111006,
-    // int: 地区名字
+    // int: Region name
     "name": "Yongzhou",
-    // int: 地区ID
+    // int: Region ID
     "cityId": 4205,
-    // int: 地区编号
+    // int: Region number
     "number": 1,
-    // int: 国家/地区ID
+    // int: Country/region ID
     "countryId": 45,
-    // int: 已绘制数量
+    // int: Number of painted pixels
     "pixelsPainted": 389274,
-    // 最后一次绘制的经纬度
+    // Latitude and longitude of the last paint
     "lastLatitude": 26.59347856637528,
     "lastLongitude": 111.63313476562497
   },
@@ -1115,29 +1113,29 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
     "lastLatitude": 25.21710750136907,
     "lastLongitude": 120.43010742187496
   }
-}
+]
 ```
 
 ### GET `/leaderboard/country/{mode}`
 
-获得所有国家/地区排行榜，仅限前50个
+Get the leaderboard of all countries/regions, limited to the top 50
 
-#### 请求
+#### Request
 
-* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
-    - `today`
-    - `week`
-    - `month`
-    - `all-time`
-* 示例URL（今天的国家地区排行榜）：`/leaderboard/country/today`
+* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+  - `today`
+  - `week`
+  - `month`
+  - `all-time`
+* Example URL (today's country/region leaderboard): `/leaderboard/country/today`
 
-#### 成功返回
+#### Successful Return
 
 ````jsonc
 [
   {
-    // int: 国家地区ID，参阅附录获得全部
-    // 此处的235对应美国
+    // int: Country/region ID, refer to appendix for all
+    // The 235 here corresponds to the United States
     "id": 235,
     "pixelsPainted": 40724480
   },
@@ -1150,37 +1148,37 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 
 ### GET `/leaderboard/player/{mode}`
 
-获得全球玩家排行榜，仅限前50个
+Get the global player leaderboard, limited to the top 50
 
-#### 请求
+#### Request
 
-* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
-    - `today`
-    - `week`
-    - `month`
-    - `all-time`
-* 示例URL（今天的玩家排行榜）：`/leaderboard/player/today`
+* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+  - `today`
+  - `week`
+  - `month`
+  - `all-time`
+* Example URL (today's player leaderboard): `/leaderboard/player/today`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 [
   {
-    // int: 用户ID
+    // int: User ID
     "id": 8883244,
-    // string: 用户名
+    // string: Username
     "name": "Tightmatt Cousin",
-    // int: Alliance ID，如果是0则代表没有
+    // int: Alliance ID, if 0 means none
     "allianceId": 0,
-    // string: Alliance名字，如果没有则是空字符串
+    // string: Alliance name, if none then empty string
     "allianceName": "",
-    // int: 已装备旗帜，旗帜列表参考附录，如果没有则是0
+    // int: Equipped flag, see appendix for flag list, if none then 0
     "equippedFlag": 155,
-    // int: 已绘制的像素数量
+    // int: Number of painted pixels
     "pixelsPainted": 64451,
-    // string: 头像URL或Base64，可通过是否以data:image/png;base64,开头判断，如果没有头像则没有这个字段
+    // string: Avatar URL or Base64, can be judged by whether it starts with data:image/png;base64,, if no avatar then no this field
     "picture": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbklEQVR42qxTQQrAMAhbpN/e+/as7LKBjLRGOkGQ0mhM0zg2w2nAJ2XAAC8x7gpwVqCgi8zkvFhqAEEdKW2x6IoaxfSZqHjrYYhFcYfOM3IGythoGAeqHouJ33Mq1ihc13Vuq9k/sf2d7wAAAP//U48dVi53OIQAAAAASUVORK5CYII=",
-    // string: discord用户名
+    // string: Discord username
     "discord": "co."
   },
   {
@@ -1197,27 +1195,27 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 
 ### GET `/leaderboard/alliance/{mode}`
 
-获得全球Alliance排行榜，仅限前50个。
+Get the global Alliance leaderboard, limited to the top 50.
 
-#### 请求
+#### Request
 
-* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
-    - `today`
-    - `week`
-    - `month`
-    - `all-time`
-* 示例URL（今天的Alliance排行榜）：`/leaderboard/alliance/today`
+* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+  - `today`
+  - `week`
+  - `month`
+  - `all-time`
+* Example URL (today's Alliance leaderboard): `/leaderboard/alliance/today`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 [
   {
     // int: Alliance ID
     "id": 165,
-    // string: Alliance名字
+    // string: Alliance name
     "name": "bapo",
-    // int: 已绘制像素数量
+    // int: Number of painted pixels
     "pixelsPainted": 771030
   },
   {
@@ -1230,19 +1228,19 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 
 ### GET `/leaderboard/region/players/{city}/{mode}`
 
-获得某个城市的玩家排行榜，仅限前50个。
+Get the player leaderboard for a city, limited to the top 50.
 
-#### 请求
+#### Request
 
-* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
-    - `today`
-    - `week`
-    - `month`
-    - `all-time`
-* URL中的`city`是城市ID，暂时没有一个明确的列表对应，因为城市太他妈多了。
-* 示例URL（深圳玩家总排行榜）：`/leaderboard/region/players/114594/all-time`
+* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+  - `today`
+  - `week`
+  - `month`
+  - `all-time`
+* The `city` in the URL is the city ID, there is no clear list correspondence yet, because there are too many cities.
+* Example URL (Shenzhen player overall leaderboard): `/leaderboard/region/players/114594/all-time`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 [
@@ -1269,23 +1267,23 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 ]
 ```
 
-> 字段定义参阅[/leaderboard/player/{mode}](#get-leaderboardplayermode)
+> Field definitions refer to [/leaderboard/player/{mode}](#get-leaderboardplayermode)
 
 ### GET `/leaderboard/region/alliances/{city}/{mode}`
 
-获得某个城市的Alliance排行榜，仅限前50个。
+Get the Alliance leaderboard for a city, limited to the top 50.
 
-#### 请求
+#### Request
 
-* URL中的`mode`代表时间范围，是一个枚举，可以是以下任何一个值：
-    - `today`
-    - `week`
-    - `month`
-    - `all-time`
-* URL中的`city`是城市ID，暂时没有一个明确的列表对应，因为城市太他妈多了。
-* 示例URL（深圳Alliance总排行榜）：`/leaderboard/region/alliances/114594/all-time`
+* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+  - `today`
+  - `week`
+  - `month`
+  - `all-time`
+* The `city` in the URL is the city ID, there is no clear list correspondence yet, because there are too many cities.
+* Example URL (Shenzhen Alliance overall leaderboard): `/leaderboard/region/alliances/114594/all-time`
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 [
@@ -1301,22 +1299,22 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
   }
 ]
 ```
-> 字段定义参阅[/leaderboard/alliance/{mode}](#get-leaderboardalliancemode)
+> Field definitions refer to [/leaderboard/alliance/{mode}](#get-leaderboardalliancemode)
 
 ### GET `/s0/tile/random`
 
-获得一个随机的已经绘制的像素
+Get a random painted pixel
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
-    // 像素位置（相对于Tile）
+    // Pixel position (relative to Tile)
 	"pixel": {
 		"x": 764,
 		"y": 676
 	},
-	// Tile位置
+	// Tile position
 	"tile": {
 		"x": 1781,
 		"y": 749
@@ -1324,54 +1322,54 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
 }
 ```
 
-Tile和像素位置之间的关系，参阅[瓦片](#瓦片)
+The relationship between Tile and pixel position, refer to [Tiles](#tiles)
 
 ### GET `/s0/pixel/{tileX}/{tileY}?x={x}&y={y}`
 
-获得某个像素点的信息
+Get information about a pixel point
 
-#### 请求
+#### Request
 
-* URL中的tileX和tileY需要为瓦片坐标，相关信息参阅[瓦片](#瓦片)
-* x和y参数为像素相对坐标，需要在1024范围内
-* 示例URL（深圳的某个位置）：`/s0/pixel/1672/892?x=668&y=265`
+* tileX and tileY in the URL need to be tile coordinates, related information refer to [Tiles](#tiles)
+* x and y parameters are pixel relative coordinates, need to be within 1024 range
+* Example URL (a location in Shenzhen): `/s0/pixel/1672/892?x=668&y=265`
 
-#### 成功返回
+#### Successful Return
 
-已绘制
+Painted
 
 ```jsonc
 {
-    // object: 绘制者信息
+    // object: Painter information
 	"paintedBy": {
-	    // int: 用户ID
+	    // int: User ID
 		"id": 1,
-		// string: 用户名
+		// string: Username
 		"name": "崔龙海",
-		// int: Alliance ID，如果没有则是0
+		// int: Alliance ID, if none then 0
 		"allianceId": 1,
-		// string: Alliance名字，如果没有则是空字符串
+		// string: Alliance name, if none then empty string
 		"allianceName": "Team ReaIB",
-		// int: 旗帜ID，对应关系参阅附录
+		// int: Flag ID, refer to appendix for correspondence
 		"equippedFlag": 0
 	},
-	// object: 区域信息
+	// object: Region information
 	"region": {
-	    // int: 信息ID，内部使用
+	    // int: Information ID, for internal use
 		"id": 114594,
-		// int: 城市ID
+		// int: City ID
 		"cityId": 4263,
-		// int: 城市名字
+		// int: City name
 		"name": "Shenzhen",
-		// int: 区域编号
+		// int: Region number
 		"number": 2,
-		// int: 国家/地区ID
+		// int: Country/region ID
 		"countryId": 45
 	}
 }
 ```
 
-未绘制（透明）
+Not painted (transparent)
 
 ```jsonc
 {
@@ -1394,37 +1392,37 @@ Tile和像素位置之间的关系，参阅[瓦片](#瓦片)
 
 ### GET `/files/s0/tiles/{tileX}/{tileY}.png`
 
-获得某个[瓦片](#瓦片)的贴图
+Get the texture of a [tile](#tiles)
 
-#### 请求
+#### Request
 
-* URL中的tileX和tileY需要为瓦片坐标，相关信息参阅[瓦片](#瓦片)
-* 示例URL：`/files/s0/tiles/1672/892.png`
+* tileX and tileY in the URL need to be tile coordinates, related information refer to [Tiles](#tiles)
+* Example URL: `/files/s0/tiles/1672/892.png`
 
-#### 成功返回
+#### Successful Return
 
 ![ex](/images/892.png)
 
 ### POST `/s0/pixel/{tileX}/{tileY}`
 
-绘制像素
+Paint pixels
 
-需要添加反作弊请求头`x-pawtect-variant`和`x-pawtect-token`，请参阅[反作弊](#反作弊)
+Need to add anti-cheat request headers `x-pawtect-variant` and `x-pawtect-token`, please refer to [Anti-cheat](#anti-cheat)
 
-#### 请求
+#### Request
 
-* 需要`j`完成认证
-* URL中的tileX和tileY需要为瓦片坐标，相关信息参阅[瓦片](#瓦片)
-* 示例URL：`/s0/pixel/1672/892`
+* Requires authentication with `j`
+* tileX and tileY in the URL need to be tile coordinates, related information refer to [Tiles](#tiles)
+* Example URL: `/s0/pixel/1672/892`
 
-#### 示例请求
+#### Request Example
 
 ```jsonc
 {
-    // array: 绘制的颜色ID，每个值对应一个像素
+    // array: Paint color IDs, each value corresponds to a pixel
 	"colors": [49, 49, 49, 49, 49, 49],
-	// array: 绘制的坐标，格式为x, y, x, y，按照 (x, y) 成对出现
-	// 坐标顺序与 colors 一一对应，即第N个颜色应用于第N个坐标
+	// array: Paint coordinates, format is x, y, x, y, appearing in pairs as (x, y)
+	// The coordinate order corresponds one-to-one with colors, that is, the Nth color is applied to the Nth coordinate
 	"coords": [
       140, 359, 
       141, 359, 
@@ -1433,22 +1431,22 @@ Tile和像素位置之间的关系，参阅[瓦片](#瓦片)
       143, 358, 
       143, 357
     ],
-    // string: 验证码token
+    // string: Captcha token
 	"t": "0.xxxx",
-	// string: 浏览器指纹
+	// string: Browser fingerprint
 	"fp": "xxxx"
 }
 ```
 
-> `colors`为绘制的颜色代码和`coords`一一对应，参阅[颜色](#颜色)和[附录](#全部颜色表)
-> 
-> 在绘制的颜色跨域多个[瓦片](#瓦片)时候会分多次请求
-> 
-> 验证码token请参阅[Turnstile](#turnstile---验证码)
-> `fp`请参阅[浏览器指纹](#fingerprintjs---浏览器指纹)
-> `x-pawtect-token`和`x-pawtect-variant`请参阅[pawtect](#pawtect)
+> `colors` corresponds one-to-one with the color codes in `coords`, refer to [Colors](#colors) and [Appendix](#all-color-tables)
+>
+> When painting colors across multiple [tiles](#tiles), multiple requests will be made
+>
+> For captcha token, refer to [Turnstile](#turnstile---captcha)
+> For `fp`, refer to [Browser Fingerprint](#fingerprintjs---browser-fingerprint)
+> For `x-pawtect-token` and `x-pawtect-variant`, refer to [pawtect](#pawtect)
 
-#### 成功返回
+#### Successful Return
 
 ```jsonc
 {
@@ -1456,7 +1454,7 @@ Tile和像素位置之间的关系，参阅[瓦片](#瓦片)
 }
 ```
 
-#### 错误返回
+#### Error Return
 
 ```jsonc
 {
@@ -1465,30 +1463,29 @@ Tile和像素位置之间的关系，参阅[瓦片](#瓦片)
 }
 ```
 
-> 验证码token或pawtect无效
+> Captcha token or pawtect invalid
 
 ### POST `/report-user`
 
 <img src="/images/staffscreen.png" align="right" width="500">
 
-举报用户，举报时客户端会渲染一张截图，客服在查看时可以看到客户端的截图和现场截图
+Report user. When reporting, the client will render a screenshot, and customer service can see the client's screenshot and live screenshot when viewing.
 
-客服可以看见被举报的用户的IP下的所有用户。
+Customer service can see all users under the reported user's IP.
 
+#### Request
 
-#### 请求
+* Requires authentication with `j`
+* Request body is multipart body
+  - `reportedUserId`: Reported user ID
+  - `latitude`: Latitude
+  - `longitude`: Longitude
+  - `zoom`: Zoom
+  - `reason`: Report reason
+  - `notes`: Report text, users can actively enter
+  - `image`: A report screenshot rendered by the client will be displayed on the customer service page
 
-* 需要`j`完成认证
-* 请求体为multipart body
-    - `reportedUserId`: 举报的用户ID
-    - `latitude`: 纬度
-    - `longitude`: 经度
-    - `zoom`: 缩放
-    - `reason`: 举报原因
-    - `notes`: 举报文本，用户可以主动输入
-    - `image`: 客户端渲染的一张举报截图会显示在客服页面
-
-### 示例请求
+#### Request Example
 
 CURL
 
@@ -1504,7 +1501,7 @@ curl -X POST "https://backend.wplace.live/report-user" \
   -F "image=@图片;type=image/jpeg"
 ```
 
-原始请求体
+Raw request body
 
 ```text
 ------boundary
@@ -1539,13 +1536,13 @@ Content-Type: image/jpeg
 ------boundary--
 ```
 
-## 反作弊
+## Anti Cheat
 
-对于[/s0/pixel/{tileX}/{tileY}](#post-s0pixeltilextiley)接口wplace添加了多个反作弊措施防止自动绘制和多账号。
+For the [/s0/pixel/{tileX}/{tileY}](#post-s0pixeltilextiley) interface, wplace adds multiple anti-cheat measures to prevent automatic painting and multiple accounts.
 
-### `lp` - LocalStorage检测
+### `lp` - LocalStorage Detection
 
-在登录之后Local Storage会写入`lp`字段，是一个base64编码的json，解码之后可以看到
+After logging in, Local Storage will write the `lp` field, which is a base64 encoded json. After decoding, you can see:
 
 ```json
 {
@@ -1554,37 +1551,37 @@ Content-Type: image/jpeg
 }
 ```
 
-其中包含了你的用户ID和登录时间戳，当你尝试提交绘制但是用户ID和Local Storage不一致时会提示你请勿使用多个账号绘制
+It contains your user ID and login timestamp. When you try to submit a paint but the user ID and Local Storage are inconsistent, you will be prompted not to use multiple accounts to paint.
 
-#### 解决方案
+#### Solution
 
-- 对于不跑在浏览器上的机器人或者脚本无视即可
-- 使用多个[浏览器配置文件](https://support.google.com/chrome/answer/2364824)
-- 切换账号时候从Local Storage删除`lp`
+- For robots or scripts that don't run in browsers, just ignore it
+- Use multiple [browser profiles](https://support.google.com/chrome/answer/2364824)
+- Delete `lp` from Local Storage when switching accounts
 
-### Turnstile - 验证码
+### Turnstile - Captcha
 
 <img src="/images/captcha.png" align="right" width="400">
 
-wplace使用了[Turnstile验证码](https://www.cloudflare.com/application-services/products/turnstile/)，并且每次绘制之后会在前端清除已经保存的验证码。
+wplace uses [Turnstile Captcha](https://www.cloudflare.com/application-services/products/turnstile/), and after each painting, the saved captcha will be cleared on the frontend.
 
-通常来说这个验证码不会频繁弹出，但是如果服务器处于高负载启动了Under Attack模式则会在每次绘制之前弹出。
+Generally speaking, this captcha will not pop up frequently, but if the server is under high load and Under Attack mode is started, it will pop up before each painting.
 
-#### 解决方案
+#### Solution
 
-- 打码平台付费自动通过验证码API
-- 通过中间人代理抓取到`https://challenges.cloudflare.com`中的`cf-turnstile-response`字段（在服务器没有开启Under Attack模式的情况下）
-- 自己打开一个浏览器挂脚本自动刷然后通过浏览器插件发回客户端。
+- Paid automatic captcha passing API through captcha platform
+- Capture the `cf-turnstile-response` field in `https://challenges.cloudflare.com` through man-in-the-middle proxy (when the server has not enabled Under Attack mode)
+- Open a browser to hang scripts automatically and send back to the client through browser plugins.
 
-### FingerprintJS - 浏览器指纹
+### FingerprintJS - Browser Fingerprint
 
 <img src="/images/FingerprintJS.png" align="right" width="400">
 
-wplace使用[FingerprintJS](https://fingerprint.com/)来上报`visitorId`（fp字段）来检测多账号和机器人。
+wplace uses [FingerprintJS](https://fingerprint.com/) to report `visitorId` (fp field) to detect multiple accounts and robots.
 
-也就是通过`User-Agent`, `屏幕分辨率`, `时区`等数据检测浏览器是不是无头、匿名模式等。
+That is, through data such as `User-Agent`, `screen resolution`, `time zone`, etc., to detect whether the browser is headless, anonymous mode, etc.
 
-并且有`0.001%`的概率将你的信息卖给FingerprintJS的提供商。
+And there is a `0.001%` chance of selling your information to FingerprintJS providers.
 
 ```javascript
 function Q8() {
@@ -1602,24 +1599,24 @@ function Q8() {
 }
 ```
 
-> Wplace的JS中的真实代码，有0.001%的几率上传你的统计信息到FingerprintJS服务器
+> Real code in Wplace's JS, 0.001% chance of uploading your statistics to FingerprintJS server
 
-#### 解决方案
+#### Solution
 
-- 严格来说wplace暂时没有完全启用此检测因为只上传了一个`visitorId`（一个MD5值），理论上使用任何MD5都可以通过因为这个值无法从服务端校验，但是为了防止被检测到多账号建议使用`MD5(userId + salt)`
+- Strictly speaking, wplace has not fully enabled this detection because only one `visitorId` (an MD5 value) is uploaded. Theoretically, any MD5 can pass because this value cannot be verified from the server side. However, to prevent being detected as multiple accounts, it is recommended to use `MD5(userId + salt)`
 
 ### Pawtect
 
-Pawtect是一个wplace最新最热引入的基于Rust编写的WASM模块，其样本可以在[pawtect_wasm_bg.wasm](files/pawtect_wasm_bg.wasm)查看，用于在请求之前对请求体进行签名，再通过请求头一同发送到服务器。
+Pawtect is a WASM module based on Rust introduced by wplace's latest and hottest technology. Its sample can be viewed in [pawtect_wasm_bg.wasm](files/pawtect_wasm_bg.wasm). It is used to sign the request body before requesting, and then send it to the server together with the request header.
 
-部分用户不会启用此检查，如果想知道某个账号是否启用了此检查，需要先请求[/me](#get-me)获得其中的`experiments`信息，如果`variant`是disabled请求时候只需要传入`x-pawtect-variant: disabled`即可否则需要传入`x-pawtect-variant`和`x-pawtect-token`两个请求头。
+Some users will not enable this check. If you want to know whether an account has enabled this check, you need to first request [/me](#get-me) to obtain the `experiments` information. If the `variant` is disabled, you only need to pass `x-pawtect-variant: disabled` when requesting, otherwise you need to pass both `x-pawtect-variant` and `x-pawtect-token` request headers.
 
-#### 解决方案
+#### Solution
 
-- 直接通过真实浏览器抓取（中间人代理或者浏览器插件）
-- 通过下方参考代码加载WASM模块实现签名（如果你的脚本使用nodejs开发）
+- Directly capture through real browser (man-in-the-middle proxy or browser plugin)
+- Implement signature by loading WASM module through reference code below (if your script is developed using nodejs)
 
-#### 参考代码
+#### Reference Code
 
 ```javascript
 let m;
@@ -1734,8 +1731,8 @@ function hn() {
     return n;
 }
 
-// 需要自己添加post逻辑
-// 示例传入：https://backend.wplace.live/s0/pixel/1/1, {}, 1
+// Need to add post logic yourself
+// Example input: https://backend.wplace.live/s0/pixel/1/1, {}, 1
 function postPaw(url, bodyStr, userId) {
     loadWASM();
     if (m.__wbindgen_start) m.__wbindgen_start();
@@ -1750,9 +1747,9 @@ function postPaw(url, bodyStr, userId) {
 
 
 
-## 附录
+## Appendix
 
-### 通用API错误
+### Common API Errors
 
 ```jsonc
 {
@@ -1761,7 +1758,7 @@ function postPaw(url, bodyStr, userId) {
 }
 ```
 
-> 未附带 `j` token 或者 token 无效
+> `j` token not attached or token invalid
 
 
 ```jsonc
@@ -1771,7 +1768,7 @@ function postPaw(url, bodyStr, userId) {
 }
 ```
 
-> Cookie 已过期
+> Cookie expired
 
 ```jsonc
 {
@@ -1780,12 +1777,12 @@ function postPaw(url, bodyStr, userId) {
 }
 ```
 
-> 请求格式错误
+> Request format error
 
-### 全部颜色表
-| 颜色 | ID | RGB | 是否付费    |
+### All Color Tables
+| Color | ID | RGB | Paid    |
 |------|------| ------- |---------|
-| | `0` | 透明 | `false` |
+| | `0` | Transparent | `false` |
 | ![#000000](https://img.shields.io/badge/-%20-000000?style=flat-square) | `1` | `0, 0, 0` | `false` |
 | ![#3c3c3c](https://img.shields.io/badge/-%20-3c3c3c?style=flat-square) | `2` | `60, 60, 60` | `false` |
 | ![#787878](https://img.shields.io/badge/-%20-787878?style=flat-square) | `3` | `120, 120, 120` | `false` |
@@ -1850,7 +1847,7 @@ function postPaw(url, bodyStr, userId) {
 | ![#948c6b](https://img.shields.io/badge/-%20-948c6b?style=flat-square) | `62` | `148, 140, 107` | `true`  |
 | ![#cdc59e](https://img.shields.io/badge/-%20-cdc59e?style=flat-square) | `63` | `205, 197, 158` | `true`  |
 
-### BitMap Java实现
+### BitMap Java Implementation
 
 ```java
 public class WplaceBitMap {
@@ -1902,10 +1899,10 @@ public class WplaceBitMap {
 }
 ```
 
-### 全部旗帜
+### All Flags
 
 
-| 旗帜 | 地区代码 | ID  |
+| Flag | Region Code | ID  |
 |---|------|-----|
 | 🇦🇫 | `AF` | `1` |
 | 🇦🇱 | `AL` | `2` |
