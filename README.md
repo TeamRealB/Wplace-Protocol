@@ -1113,7 +1113,7 @@ Token是一段被编码的文本，而不是一个普通的随机字符串，可
     "lastLatitude": 25.21710750136907,
     "lastLongitude": 120.43010742187496
   }
-}
+]
 ```
 
 ### GET `/leaderboard/country/{mode}`
