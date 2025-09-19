@@ -1570,6 +1570,8 @@ wplace使用了[Turnstile验证码](https://www.cloudflare.com/application-servi
 
 通常来说这个验证码不会频繁弹出，但是如果服务器处于高负载启动了Under Attack模式则会在每次绘制之前弹出。
 
+Site Key为`0x4AAAAAABpqJe8FO0N84q0F`
+
 #### 解决方案
 
 - 打码平台付费自动通过验证码API
