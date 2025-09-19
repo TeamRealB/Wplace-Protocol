@@ -1617,6 +1617,7 @@ Pawtect是一个wplace最新最热引入的基于Rust编写的WASM模块，其�
 #### 解决方案
 
 - 直接通过真实浏览器抓取（中间人代理或者浏览器插件）
+- 如果你使用Java开发可以使用本仓库的纯Java Pawtect实现：[Pawtect.java](pawtect-java/Pawtect.java)（需要Bouncy Castle）
 - 通过下方参考代码加载WASM模块实现签名（如果你的脚本使用nodejs开发）
 
 #### 参考代码
