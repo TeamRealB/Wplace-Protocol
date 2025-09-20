@@ -1,6 +1,6 @@
 # Wplace Protocol
 
-Analysis of [Wplace](https://wplace.live)'s technology stack, protocols, and interfaces.
+Analysis of [Wplace](https://wplace.live)'s technology stack, protocols, and endpoints.
 
 Disclaimer: Some unreferenced endpoints are omitted as they may be removed at any time. Please contact me promptly if you notice any errors.
 
@@ -1538,7 +1538,7 @@ Content-Type: image/jpeg
 
 ## Anti-Cheating
 
-Multiple anti-cheating measures have been added to the wplace interface for the [/s0/pixel/{tileX}/{tileY}](#post-s0pixeltilextiley) endpoint to prevent automated drawing and multiple accounts.
+Multiple anti-cheating measures have been added to the wplace endpoint for the [/s0/pixel/{tileX}/{tileY}](#post-s0pixeltilextiley) endpoint to prevent automated drawing and multiple accounts.
 
 ### `lp` - LocalStorage Detection
 
