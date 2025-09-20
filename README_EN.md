@@ -1,15 +1,15 @@
 # Wplace Protocol
 
-Analysis of [Wplace](https://wplace.live)'s technology stack, protocols, and interfaces.
+Analysis of [Wplace](https://wplace.live)'s technology stack, protocols, and endpoints.
 
-Disclaimer: Some unreferenced interfaces are not listed because they may be removed at any time. If there are any errors, please contact me in time.
+Disclaimer: Some unreferenced endpoints are omitted as they may be removed at any time. Please contact me promptly if you notice any errors.
 
 Table of contents:
 
 - [Concepts and Systems](#concepts-and-systems)
   - [Map](#map)
   - [Tiles](#tiles)
-    - [Calculating the corresponding longitude and latitude](#calculating-the-corresponding-longitude-and-latitude)
+    - [Calculating Corresponding Latitude/Longitude](#calculating-corresponding-latitude-and-longitude)
     - [Related endpoints](#related-endpoints)
   - [Colors](#colors)
     - [Related endpoints](#related-endpoints-1)
@@ -53,49 +53,49 @@ Table of contents:
   - [GET `/files/s0/tiles/{tileX}/{tileY}.png`](#get-filess0tilestilextileypng)
   - [POST `/s0/pixel/{tileX}/{tileY}`](#post-s0pixeltilextiley)
   - [POST `/report-user`](#post-report-user)
-- [Anti Cheat](#anti-cheat)
+- [Anti Cheat](#anti-cheating)
 - [Appendix](#appendix)
-  - [Common API Errors](#common-api-errors)
-  - [All Color Tables](#all-color-tables)
-  - [BitMap Java implementation](#bitmap-java-implementation)
+  - [General API Errors](#general-api-errors)
+  - [Full Color Palette](#full-color-palette)
+  - [BitMap Java Implementation](#bitmap-java-implementation)
   - [All Flags](#all-flags)
 
 ## Concepts and Systems
 
-_Most names are subjective and do not necessarily reflect the same naming conventions as in source code or other wplace projects._
+_Most names are subjective and may not align with source code or other Wplace projects_
 
 ### Map
 
-<img src="/images/projection.JPG" align="right" width="200">
+<img src="/images/projection.JPG" align="right" width="200" alt="Mercator Projection"/>
 
 > Keywords: `Map / Canvas / World`
 
-Map refers to the overall canvas of Wplace. The map is rendered in the [Mercator (Web Mercator)](https://en.wikipedia.org/wiki/Mercator_projection) projection, using the [OpenFreeMap](https://openfreemap.org/) map, which uses the Liberty Style. The map consists of `2048x2048` pixels, or `4,194,304` [tiles](#tiles), these tiles are overlaid on the map using Canvas.
+The map refers to Wplace's overall canvas. Rendered using the [Mercator Projection / Web Mercator](https://en.wikipedia.org/wiki/Mercator_projection), the map employs the Liberty Style from [OpenFreeMap](https://openfreemap.org/). The map comprises `2048x2048` tiles, totaling `4,194,304` tiles. These tiles are overlaid on the map using Canvas in the frontend.
 
-Most of the locations on the map are unclaimed/disputed in reality, such as the Pacific Ocean, which is divided into the countries or regions with the nearest landmass.
+Most locations on the map that lack real-world territorial ownership or are disputed have been assigned to the nearest landmass's country or region. For example, the North Pacific is assigned to Honolulu, USA, and the South Pacific is assigned to Adams Island, Australia.
 
-The total number of pixels in the map is `4,194,304,000,000` (approximately 4.1 trillion / 4.1 trillion / 4.1 trillion).
+The total number of pixels in the map is `4,194,304,000,000` (approximately 4.1 trillion).
 
 ### Tiles
 
 > Keywords: `Tile / Chunk`
 
-A tile is the smallest unit of the wplace rendering canvas. Each tile is a `1000×1000` PNG image on the server, containing `1,000,000` pixels.
+Tiles are the smallest units rendered on the wplace canvas. Each tile is a `1000×1000` PNG image on the server, containing `1,000,000` pixels.
 
-The data type corresponding to the tile is `Vec2i`, namely `x` and `y`.
+The data type for tiles is `Vec2i`, representing `x` and `y` coordinates.
 
-The relative coordinates mentioned in the API are the coordinates starting from 0 of the tile.
+Relative coordinates mentioned in the API start from position 0 within the tile.
 
-#### Calculating the corresponding longitude and latitude
+#### Calculating Corresponding Latitude and Longitude
 
-The entire [map](#map) has `2048` tiles in both the horizontal and vertical directions. The `Zoom` value can be calculated using this:
+The entire [map](#map) has `2048` tiles both horizontally and vertically. This allows calculating the `Zoom` value:
 
 ```java
 int n = 2048; // Number of tiles
-int z = (int) (Math.log(n) / Math.log(2)); // Calculate Zoom using the change of base formula.
+int z = (int) (Math.log(n) / Math.log(2)); // Calculate Zoom using the change-of-base formula
 ```
 
-Using this formula, we can calculate the zoom to be **approximately** `11`, and then use the following algorithm to calculate the latitude and longitude:
+Using this formula, the zoom level is calculated to be **approximately** `11`. Subsequently, the following algorithm can be used to compute the latitude and longitude:
 
 ```java
 double n = Math.pow(2.0, 11); // zoom is 11
@@ -104,9 +104,9 @@ double latRad = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 0.5) / n)));
 double lat = Math.toDegrees(latRad);
 ```
 
-Among them, `lon` and `lat` are the values of latitude and longitude
+Here, `lon` and `lat` represent the latitude and longitude values.
 
-> Formula reference from: [Slippy map tilenames](https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames)
+> Formula reference: [Slippy map tilenames](https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames)
 
 #### Related Endpoints
 
@@ -117,18 +117,18 @@ Among them, `lon` and `lat` are the values of latitude and longitude
 
 > Keywords: `Color / Palette`
 
-Wplace provides 64 colors, the first 32 are free colors, and the latter 32 each require `2,000` Droplets to unlock.
+Wplace offers 64 colors. The first 32 are free, while each of the latter 32 requires `2,000` Droplets to unlock.
 
-To check if a color is unlocked, the frontend uses a bitmask check to examine `extraColorsBitmap`, which is a field in the JSON returned by the user profile interface.
+To determine if a color is unlocked, the frontend performs a bitmask check on `extraColorsBitmap`—a field within the JSON returned by the user profile API.
 
-The checking logic is:
+The verification logic is as follows:
 
 ```java
 int extraColorsBitmap = 0;
 int colorId = 63; // Color ID to check
 boolean unlocked;
 
-if (colorId < 32) { // Skip the first 32 as the first 32 colors are free
+if (colorId < 32) { // Skip first 32 since they're free
     unlocked = true;
 } else {
     int mask = 1 << (colorId - 32);
@@ -136,9 +136,9 @@ if (colorId < 32) { // Skip the first 32 as the first 32 colors are free
 }
 ```
 
-> Disclaimer: This code is Java code derived by the author based on analysis of the obfuscated JS code in Wplace, not the original code.
+> Disclaimer: This code is Java code analyzed by the author from obfuscated JavaScript code in Wplace, not the original source code.
 
-For color codes, please check [Appendix](#all-color-tables)
+For color codes, please refer to [Appendix](#full-color-palette)
 
 #### Related Endpoints
 
@@ -147,11 +147,11 @@ For color codes, please check [Appendix](#all-color-tables)
 
 ### Flags
 
-> Keywords: `Flag`
+> Keyword: `Flag`
 
-Wplace contains 251 flags. After purchasing a flag, you can save 10% pixels when drawing in the corresponding region. The price of a flag is `20,000` Droplets.
+Wplace contains 251 flags. Purchasing a flag allows you to save 10% of pixels when painting in the corresponding region. Each flag costs `20,000` Droplets.
 
-Whether a flag is unlocked is implemented through a custom BitMap. Here is the JS code for this BitMap:
+Flag unlock status is managed via a custom BitMap. Below is the JS code for this BitMap:
 
 ```js
 class Tt {
@@ -182,7 +182,7 @@ class Tt {
 
 Readable Java code for BitMap can be found in [Appendix](#bitmap-java-implementation)
 
-After the frontend obtains the `flagsBitmap` field through the user profile interface, it decodes it from Base64 to Bytes and then passes it to BitMap to read whether a flag ID has been unlocked.
+After the frontend obtains the `flagsBitmap` field through the user profile endpoint, it decodes it from Base64 to Bytes and then passes it to BitMap to read whether a flag ID has been unlocked.
 
 For all flag codes, please refer to [Appendix](#all-flags)
 
@@ -204,20 +204,20 @@ double base = Math.pow(30, 0.65);
 double level = Math.pow(totalPainted, 0.65) / base;
 ```
 
-Each level up will gain `500` droplets and increase `2` maximum pixels
+Each level up will gain `500` droplets and increase `2` maximum charges
 
 ### Store
 
 > Keywords: `Store / Purchase`
 
-Items can be purchased with the in-game virtual currency Droplet in the store. The following is a list of items:
+Items can be purchased with the in-game virtual currency `Droplet` in the store. The following is a list of items:
 
-| Item ID | Item Name             | Price (Droplet) | Variants     |
-|---------|-----------------------|-----------------|--------------|
-| `70`    | +5 Max. Charges       | `500`           | None         |
-| `80`    | +30 Paint Charges     | `500`           | None         |
-| `100`   | Unlock Paid Colors    | `2000`          | [Color ID](#colors) |
-| `110`   | Unlock Flag           | `20000`         | [Flag ID](#flags) |
+| Item ID | Item Name          | Price (Droplet) | Variants            |
+|---------|--------------------|-----------------|---------------------|
+| `70`    | +5 Max. Charges    | `500`           | None                |
+| `80`    | +30 Paint Charges  | `500`           | None                |
+| `100`   | Unlock Paid Colors | `2000`          | [Color ID](#colors) |
+| `110`   | Unlock Flag        | `20000`         | [Flag ID](#flags)   |
 
 #### Related Endpoints
 
@@ -229,13 +229,13 @@ Other item IDs are reserved for recharge items (cash payment)
 
 Unless otherwise specified, the URL host is `backend.wplace.live`
 
-For common API errors, refer to [Appendix](#common-api-errors)
+For common API errors, refer to [Appendix](#general-api-errors)
 
 ### Authentication
 
-Authentication is implemented through the field `j` in Cookie. After logging in, the backend will save the [Json Web Token](https://en.wikipedia.org/wiki/JSON_Web_Token) to the Cookie. Subsequent requests to `wplace.live` and `backend.wplace.live` will carry this Cookie.
+Authentication is achieved through the `j` field in cookies. After login, the backend stores a [JSON Web Token](https://en.wikipedia.org/wiki/JSON_Web_Token) in the cookie. Subsequent requests to `wplace.live` and `backend.wplace.live` will carry this cookie.
 
-The token is an encoded text, not an ordinary random string. Some information can be decoded through [jwt.io](https://jwt.io) or any JWT tool.
+The token is encoded text, not a random string. You can decode it using [jwt.io](https://jwt.io) or any JWT tool to retrieve information.
 
 ```json
 {
@@ -247,40 +247,40 @@ The token is an encoded text, not an ordinary random string. Some information ca
 }
 ```
 
-The `exp` field is the expiration timestamp, and the expiration time can be determined only through the token.
+The `exp` field represents the expiration timestamp, allowing the expiration time to be determined solely from the token.
 
 ### Cookie
 
-Generally speaking, only the `j` Cookie is required to request the interface. However, if the server is under high load, the developer will enable [Under Attack mode](https://developers.cloudflare.com/fundamentals/reference/under-attack-mode/). If Under Attack mode is enabled, an additional valid `cf_clearance` Cookie is required, otherwise a Cloudflare challenge will pop up.
+Typically, only the `j` cookie is required when requesting an API endpoint. However, if the server experiences high load, developers may enable [Under Attack Mode](https://developers.cloudflare.com/fundamentals/reference/under-attack-mode/). When Under Attack Mode is active, an additional valid `cf_clearance` cookie must be included in the request header. Failure to do so will trigger a Cloudflare challenge.
 
-You need to ensure that when automatic programs initiate requests, most fields in the request headers (such as `User-Agent`, `Accept-Language`, etc.) are consistent with the browser you obtained `cf_clearance` from, otherwise the verification will not pass and the challenge will still pop up.
+Ensure that most request header fields (e.g., `User-Agent`, `Accept-Language`) in automated requests match those of the browser used to obtain the `cf_clearance` cookie. Otherwise, verification will fail and the challenge will still appear.
 
 ### GET `/me`
 
-Get user information
+Retrieve user information
 
 #### Request
 
-- Requires authentication with `j`
+- Requires `j` for authentication
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
     // int: Alliance ID
     "allianceId": 1, 
-    // enum: Alliance permissions
+    // enum: Alliance permission
     // admin/member
     "allianceRole": "admin",
     // boolean: Whether banned
     "banned": false,
     // object: Pixel information
     "charges": {
-        // int: Recovery interval of pixels, in milliseconds, 30000 milliseconds is 30 seconds
+        // int: Pixel recharge interval in milliseconds (30000 ms = 30 seconds)
         "cooldownMs": 30000,
         // float: Remaining pixels
         "count": 35.821833333333586,
-        // float: Maximum number of pixels
+        // float: Maximum pixel count
         "max": 500
     },
     // string: ISO-3166-1 alpha-2 region code
@@ -292,16 +292,16 @@ Get user information
     "droplets": 75,
     // int: Equipped flag
     "equippedFlag": 0,
-    // object: A/B testing markers, the internal meaning is unclear
-    // For example, the variant value is koala, the internal meaning is unclear, just a code name.
-    // But it will be transmitted with the request header. If the variant of 2025-09_pawtect is disabled, pawtect-token will not be sent.
-    // This indicates that some users have not enabled the new security mechanism.
+    // object: Canary test flag, internal meaning unclear
+    // For example, the variant value “koala” has no defined internal meaning and serves only as an identifier.
+    // However, it is sent in request headers. If the variant for 2025-09_pawtect is disabled, the pawtect-token is not sent.
+    // This indicates some users have not been enabled for the new security mechanism.
     "experiments": {
         "2025-09_pawtect": {
             "variant": "koala"
         }
     },
-    // int: extraColorsBitmap, see the color section to understand its function.
+    // int: extraColorsBitmap, see the #Colors section for its function.
     "extraColorsBitmap": 0,
     // array: Favorite locations
     "favoriteLocations": [
@@ -312,41 +312,41 @@ Get user information
             "longitude": 0.9266305280273432
         }
     ],
-    // string: List of unlocked flags, see the flag section to understand its function.
+    // string: List of unlocked flags. See the #Flags section for details on their function.
     "flagsBitmap": "AA==",
-    // enum: Generally does not appear, only displayed if you have permissions
+    // enum: Typically not displayed; shown only if you have permission
     // moderator/global_moderator/admin
     "role": "",
     // int: User ID
     "id": 1,
-    // boolean: Whether there is a purchase, if so, the order list will be displayed in the menu
+    // boolean: Indicates if the user has made purchases; if true, displays order list in menu
     "isCustomer": false,
     // float: Level
     "level": 94.08496005353335,
-    // int: Maximum number of favorites, default is 15, no way to improve has been found yet
+    // int: Maximum favorite locations, default 15. No known method to increase currently
     "maxFavoriteLocations": 15,
     // string: Username
     "name": "username",
-    // boolean: Whether phone number verification is required, if so, a phone verification window will pop up when visiting
+    // boolean: Requires phone number verification. If enabled, a verification window will pop up during access.
     "needsPhoneVerification": false,
-    // string: Avatar URL or base64, need to judge according to the prefix (e.g. data:image/png;base64,)
+    // string: Avatar URL or base64. Determine based on prefix (e.g., data:image/png;base64,)
     "picture": "",
     // int: Number of pixels already painted
     "pixelsPainted": 114514,
     // boolean: Whether to display your last painted location on the alliance page
     "showLastPixel": true,
-    // string: Your unbanned timestamp, if it is 1970, it means you are not banned or have been permanently banned.
+    // string: Your unban timestamp. If set to 1970, it indicates you've never been banned or have been permanently banned.
     "timeoutUntil": "1970-01-01T00:00:00Z"
 }
 ```
 
 ### POST `/me/update`
 
-Update current user's personal information
+Update the current user's personal information
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
 #### Request Example
 
@@ -361,7 +361,7 @@ Update current user's personal information
 }
 ```
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -369,7 +369,7 @@ Update current user's personal information
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -382,15 +382,15 @@ Update current user's personal information
 
 ### GET `/me/profile-pictures`
 
-Get avatar list
+Retrieve profile picture list
 
-A person can have multiple avatars (add one `20,000` Droplets), and then can change to any avatar in the avatar list at any time
+A user may have multiple profile pictures  (adding one requires `20,000` Droplets) and can switch to any picture in the list at any time.
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 // array: All avatars
@@ -398,7 +398,7 @@ A person can have multiple avatars (add one `20,000` Droplets), and then can cha
     {
         // int: Avatar ID
         "id": 0,
-        // string: Avatar URL or Base64, can be judged by whether it starts with data:image/png;base64,
+        // string: Avatar URL or Base64, can be identified by whether it starts with data:image/png;base64,
         "url": ""
     }
 ]
@@ -408,32 +408,32 @@ A person can have multiple avatars (add one `20,000` Droplets), and then can cha
 
 ### POST `/me/profile-picture/change`
 
-Change avatar
+Change Profile Picture
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
 #### Request Example
 
-Change existing custom avatar
+Change existing custom profile picture
 
 ```jsonc
 {
-    // int: Avatar ID, you need to ensure you have added this avatar
+    // int: Profile picture ID. Ensure this picture exists.
 	"pictureId": 1
 }
 ```
 
-Reset avatar
+Reset Profile Picture
 
 ```jsonc
 {}
 ```
 
-> Requesting an empty JsonObject can reset the avatar
+> Sending an empty json object resets the profile picture.
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -443,14 +443,14 @@ Reset avatar
 
 ### POST `/me/profile-picture`
 
-Upload avatar
+Upload Profile Picture
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 * Request body is Multipart File: `image`
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -458,7 +458,7 @@ Upload avatar
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -469,17 +469,17 @@ Upload avatar
 
 ### GET `/alliance`
 
-Get Alliance information
+Retrieve Alliance information
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
-	// string: Alliance introduction
+	// string: Alliance description
 	"description": "CCB",
 	// object: Headquarters
 	"hq": {
@@ -492,15 +492,15 @@ Get Alliance information
 	"members": 263,
 	// string: Name
 	"name": "Team RealB",
-	// string: Total painted
+	// string: Total pixels painted
 	"pixelsPainted": 1419281,
-	// enum: Your permissions
+	// enum: Your role
 	// admin/member
 	"role": "admin"
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -517,27 +517,27 @@ Create an Alliance
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
 #### Request Example
 
 ```jsonc
 {
-    // string: Alliance name, cannot be duplicated.
+    // string: Alliance name, must be unique.
 	"name": "Team RealB"
 }
 ```
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
-    // int: Created Alliance ID
+    // int: ID of the created Alliance
 	"id": 1
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -546,7 +546,7 @@ Create an Alliance
 }
 ```
 
-> Alliance name is already taken
+> Alliance name is already in use
 
 ```jsonc
 {
@@ -555,17 +555,17 @@ Create an Alliance
 }
 ```
 
-> Already have an Alliance but still trying to create, normally will not trigger.
+> Attempted to create an Alliance when one already exists. This should not occur under normal circumstances.
 
 ### POST `/alliance/update-description`
 
-Update Alliance introduction
+Update Alliance Description
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -573,7 +573,7 @@ Update Alliance introduction
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -582,26 +582,26 @@ Update Alliance introduction
 }
 ```
 
-> No Alliance or permission is not admin
+> No Alliance exists or permission is not admin
 
 ### GET `/alliance/invites`
 
-Get Alliance invitation links
+Retrieve Alliance invitation links
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
-// array: Alliance invitation links, usually only one and the format is UUID
+// array: Alliance invitation links, typically a single UUID-formatted entry
 [
     "fe7c9c32-e95a-4f5f-a866-554cde2149c3"
 ]
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -610,19 +610,19 @@ Get Alliance invitation links
 }
 ```
 
-> No Alliance or permission is not admin
+> No Alliance exists or permission is not admin
 
 ### GET `/alliance/join/{invite}`
 
-Join Alliance through Invite UUID, see [/alliance/invites](#get-allianceinvites) to get Invite UUID
+Join an Alliance using an invitation UUID. To obtain an invitation UUID, refer to [/alliance/invites](#get-allianceinvites).
 
 #### Request
 
-* Requires authentication with `j`
-* The {invite} parameter in the URL is the invitation UUID
-  - Example URL (set to Chinese flag): `/alliance/join/fe7c9c32-e95a-4f5f-a866-554cde2149c3`
+* Requires `j` for authentication
+* The {invite} parameter in the URL represents the invitation UUID
+  - Example URL (set to the Chinese flag): `/alliance/join/fe7c9c32-e95a-4f5f-a866-554cde2149c3`
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -630,9 +630,9 @@ Join Alliance through Invite UUID, see [/alliance/invites](#get-allianceinvites)
 }
 ```
 
-> If the target to join is consistent with your existing Alliance, it will also return success
+> If the target Alliance matches one you already belong to, success will still be returned
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -659,7 +659,7 @@ Join Alliance through Invite UUID, see [/alliance/invites](#get-allianceinvites)
 }
 ```
 
-> Banned by this Alliance
+> Blocked by this Alliance
 
 ### POST `/alliance/update-headquarters`
 
@@ -667,7 +667,7 @@ Update Alliance headquarters
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
 #### Request Example
 
@@ -678,7 +678,7 @@ Update Alliance headquarters
 }
 ```
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -686,7 +686,7 @@ Update Alliance headquarters
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 
 ```jsonc
@@ -696,23 +696,23 @@ Update Alliance headquarters
 }
 ```
 
-> No Alliance or permission is not admin
+> No Alliance exists or permission is not admin
 
 ### GET `/alliance/members/{page}`
 
-Get Alliance member list, with pagination system, may need to get multiple pages if members exceed 50
+Retrieve the Alliance member list. Features pagination; may require multiple pages if members exceed 50.
 
 #### Request
 
-* Requires authentication with `j`
-* The {page} parameter in the URL is the page number, starting from 0
-  - Example URL (get the first page): `/alliance/members/0`
+* Requires `j` for authentication
+* The {page} parameter in the URL represents the page number, starting from 0
+  - Example URL (for first page): `/alliance/members/0`
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
-    // array: Up to 50 per page
+    // array: Maximum 50 members per page
 	"data": [{
 	    // int: User ID
 		"id": 1,
@@ -730,12 +730,12 @@ Get Alliance member list, with pagination system, may need to get multiple pages
 		"name": "cubk",
 		"role": "member"
 	}],
-	// boolean: Whether there is a next page
+	// boolean: whether there is a next page
 	"hasNext": true
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -749,17 +749,17 @@ Get Alliance member list, with pagination system, may need to get multiple pages
 
 ### GET `/alliance/members/banned/{page}`
 
-Get the list of banned members of the Alliance, with a pagination system. If the members exceed 50, you may need to get multiple pages.
+Retrieves a list of members banned by the Alliance. Includes pagination; may require multiple requests if members exceed 50.
 
 Banned members cannot rejoin the Alliance.
 
 #### Request
 
-* Requires authentication with `j`
-* The {page} parameter in the URL is the page number, starting from 0
-  - Example URL (get the first page): `/alliance/members/banned/0`
+* Requires `j` for authentication
+* `{page}` parameter in URL represents page number, starting from 0
+  - Example URL (retrieve first page): `/alliance/members/banned/0`
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -771,9 +771,9 @@ Banned members cannot rejoin the Alliance.
 }
 ```
 
-> Similar to the regular member interface, but without `role`, because banned members are no longer in the alliance
+> Similar to the regular member endpoint, but lacks `role` since banned users are no longer in the alliance.
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -786,26 +786,26 @@ Banned members cannot rejoin the Alliance.
 
 ### POST `/alliance/give-admin`
 
-Promote a member to Admin, cannot be demoted
+Promotes a member to Admin status. Cannot be downgraded.
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
 #### Request Example
 
 ```jsonc
 {
-    // int: User ID to promote
+    // int: User ID to be promoted
 	"promotedUserId": 1
 }
 ```
 
-#### Successful Return
+#### Response upon successful request
 
-This interface has no return, response code is `200` for success
+This endpoint does not return data. A `200` status code indicates success.
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -818,13 +818,13 @@ This interface has no return, response code is `200` for success
 
 ### POST `/alliance/ban`
 
-Kick out and ban a member
+Kick and ban a member
 
-After banning, if the ban is not lifted, the member cannot rejoin
+Once banned, the member cannot rejoin unless the ban is lifted
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
 #### Request Example
 ```jsonc
@@ -834,7 +834,7 @@ After banning, if the ban is not lifted, the member cannot rejoin
 }
 ```
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -842,7 +842,7 @@ After banning, if the ban is not lifted, the member cannot rejoin
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -855,11 +855,11 @@ After banning, if the ban is not lifted, the member cannot rejoin
 
 ### POST `/alliance/unban`
 
-Unban a member. After unbanning, they will not automatically return to the Alliance, but can only rejoin.
+Unbans a member. After unbanning, the member will not automatically rejoin the Alliance but will be able to reapply.
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
 #### Request Example
 
@@ -870,7 +870,7 @@ Unban a member. After unbanning, they will not automatically return to the Allia
 }
 ```
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -878,7 +878,7 @@ Unban a member. After unbanning, they will not automatically return to the Allia
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -891,19 +891,19 @@ Unban a member. After unbanning, they will not automatically return to the Allia
 
 ### GET `/alliance/leaderboard/{mode}`
 
-Get the player leaderboard within the Alliance, limited to the top 50.
+Retrieve the top 50 player rankings within the Alliance.
 
 #### Request
 
-* Requires authentication with `j`
-* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+* Requires `j` for authentication
+* `mode` in the URL represents the time range and is an enumeration with any of the following values:
   - `today`
   - `week`
   - `month`
   - `all-time`
-* Example URL (today's leaderboard): `/alliance/leaderboard/today`
+* Example URL (Today's Leaderboard): `/alliance/leaderboard/today`
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 [
@@ -911,18 +911,18 @@ Get the player leaderboard within the Alliance, limited to the top 50.
     // int: User ID
     "userId": 10815100,
     // string: Username
-    "name": "做爱",
-    // int: Flag ID, see appendix for flag list
+    "name": "Make Love",
+    // int: Flag ID (refer to appendix for flag list)
     "equippedFlag": 0,
-    // int: Number of painted pixels
+    // int: Number of pixels painted
     "pixelsPainted": 32901,
-    // Latitude and longitude of the last paint, if the user has turned off showLastPixel, these two fields will not be present
+    // Latitude and longitude of last drawn pixel; absent if user disabled showLastPixel
     "lastLatitude": 22.527739206672393,
     "lastLongitude": 114.02762695312497
   },
   {
     "userId": 10850297,
-    "name": "尹永铉",
+    "name": "Yoon Yong Hyun",
     "equippedFlag": 0,
     "pixelsPainted": 31631
   }
@@ -935,7 +935,7 @@ Favorite a location
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
 #### Request Example
 
@@ -946,7 +946,7 @@ Favorite a location
 }
 ```
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -956,7 +956,7 @@ Favorite a location
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -965,16 +965,16 @@ Favorite a location
 }
 ```
 
-> Number of favorites exceeds maxFavoriteLocations
+> The number of favourites exceeds the `maxFavoriteLocations` limit.
 
 
 ### POST `/favorite-location/delete`
 
-Unfavorite a location
+Remove a favorite location
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
 #### Request Example
 
@@ -985,7 +985,7 @@ Unfavorite a location
 }
 ```
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -993,15 +993,15 @@ Unfavorite a location
 }
 ```
 
-> Any ID will return success even if it is not favorited or does not exist
+> Passing any ID, even for unfavorited or non-existent locations, will return success.
 
 ### POST `/purchase`
 
-Purchase items, for related definitions please read the [Store](#store) section
+Purchase an item. For related definitions, refer to the [Store](#Store) section.
 
 #### Request
 
-* Requires authentication with `j`
+* Requires `j` for authentication
 
 #### Request Example
 
@@ -1011,15 +1011,15 @@ Purchase items, for related definitions please read the [Store](#store) section
 	"product": {
 	    // int: Item id
 		"id": 100,
-		// int: Purchase quantity, for Paint Charges/Max Charge multiple can be purchased
+		// int: Purchase quantity. Multiple units can be purchased for Paint Charges/Max. Charge.
 		"amount": 1,
-		// int: Variant value, some items have variants, if no variant this value is not needed
+		// int: Variant value. Some items have variants; omit if no variant exists.
 		"variant": 49
 	}
 }
 ```
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -1027,15 +1027,15 @@ Purchase items, for related definitions please read the [Store](#store) section
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
-All errors returned by this interface are the same
+All errors returned by this endpoint follow the same format
 
 ```json
 {"error":"Forbidden","status":403}{"success":true}
 ```
 
-> It's possible that the Brazilian person ate too many drugs or was hit in the back of the head by football causing brain damage and wrote this wrong, but this response body actually looks like this, may need additional processing
+> Possibly due to Brazilians overdoing it on drugs or getting hit in the back of the head by a soccer ball, causing brain malfunction and leading to this typo. But this response body genuinely looks like this, so extra handling might be needed.
 > 
 > ![proof](/images/bad-resp.png)
 
@@ -1045,11 +1045,11 @@ Set display flag
 
 #### Request
 
-* Requires authentication with `j`
-* The {id} parameter in the URL is the flag ID, all flag IDs and flag unlock checks refer to [Flags](#flags) and [Appendix](#all-flags)
-  - Example URL (set to Chinese flag): `/flag/equip/45`
+* Requires `j` for authentication
+* The {id} parameter in the URL represents the flag ID. Refer to [Flags](#flags) and [Appendix](#all-flags) for all flag IDs and unlock checks.
+  - Example URL (to set the Chinese national flag): `/flag/equip/45`
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -1057,7 +1057,7 @@ Set display flag
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -1070,19 +1070,19 @@ Set display flag
 
 ### GET `/leaderboard/region/{mode}/{country}`
 
-Get the regional painting leaderboard for a country/region (top 50 only)
+Retrieve a region-based leaderboard for a specific country/region (top 50 entries only)
 
 #### Request
 
-* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+* `mode` in the URL denotes the time range and is an enumeration with any of the following values:
   - `today`
   - `week`
   - `month`
   - `all-time`
-* The `country` in the URL is the region ID, the corresponding table please refer to [Appendix](#all-flags)
-* Example URL (China's city leaderboard today): `/leaderboard/region/today/45`
+* `country` in the URL is the region ID. Refer to the [Appendix](#all-flags) for the corresponding table.
+* Example URL (China's city leaderboard for today): `/leaderboard/region/today/45`
 
-#### Successful Return:
+#### Response upon successful request:
 
 ```jsonc
 [
@@ -1097,9 +1097,9 @@ Get the regional painting leaderboard for a country/region (top 50 only)
     "number": 1,
     // int: Country/region ID
     "countryId": 45,
-    // int: Number of painted pixels
+    // int: Number of pixels painted
     "pixelsPainted": 389274,
-    // Latitude and longitude of the last paint
+    // Latitude and longitude of last painted point
     "lastLatitude": 26.59347856637528,
     "lastLongitude": 111.63313476562497
   },
@@ -1118,24 +1118,24 @@ Get the regional painting leaderboard for a country/region (top 50 only)
 
 ### GET `/leaderboard/country/{mode}`
 
-Get the leaderboard of all countries/regions, limited to the top 50
+Retrieve all country leaderboards, limited to the top 50
 
 #### Request
 
-* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+* `mode` in the URL represents the time range and is an enumeration with any of the following values:
   - `today`
   - `week`
   - `month`
   - `all-time`
-* Example URL (today's country/region leaderboard): `/leaderboard/country/today`
+* Example URL (today's country leaderboard): `/leaderboard/country/today`
 
-#### Successful Return
+#### Response upon successful request
 
 ````jsonc
 [
   {
-    // int: Country/region ID, refer to appendix for all
-    // The 235 here corresponds to the United States
+    // int: Country ID (see appendix for full list)
+    // 235 corresponds to the United States
     "id": 235,
     "pixelsPainted": 40724480
   },
@@ -1148,18 +1148,18 @@ Get the leaderboard of all countries/regions, limited to the top 50
 
 ### GET `/leaderboard/player/{mode}`
 
-Get the global player leaderboard, limited to the top 50
+Retrieve the global player leaderboard, limited to the top 50 players
 
 #### Request
 
-* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+* `mode` in the URL represents the time range and is an enumeration with any of the following values:
   - `today`
   - `week`
   - `month`
   - `all-time`
 * Example URL (today's player leaderboard): `/leaderboard/player/today`
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 [
@@ -1168,15 +1168,15 @@ Get the global player leaderboard, limited to the top 50
     "id": 8883244,
     // string: Username
     "name": "Tightmatt Cousin",
-    // int: Alliance ID, if 0 means none
+    // int: Alliance ID, 0 if none
     "allianceId": 0,
-    // string: Alliance name, if none then empty string
+    // string: Alliance name, empty string if none
     "allianceName": "",
-    // int: Equipped flag, see appendix for flag list, if none then 0
+    // int: Equipped flags (refer to appendix for flag list), 0 if none
     "equippedFlag": 155,
-    // int: Number of painted pixels
+    // int: Number of pixels painted
     "pixelsPainted": 64451,
-    // string: Avatar URL or Base64, can be judged by whether it starts with data:image/png;base64,, if no avatar then no this field
+    // string:  Avatar URL or Base64 (determined by whether it starts with `data:image/png;base64,`). This field is absent if no avatar is present
     "picture": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAbklEQVR42qxTQQrAMAhbpN/e+/as7LKBjLRGOkGQ0mhM0zg2w2nAJ2XAAC8x7gpwVqCgi8zkvFhqAEEdKW2x6IoaxfSZqHjrYYhFcYfOM3IGythoGAeqHouJ33Mq1ihc13Vuq9k/sf2d7wAAAP//U48dVi53OIQAAAAASUVORK5CYII=",
     // string: Discord username
     "discord": "co."
@@ -1195,18 +1195,18 @@ Get the global player leaderboard, limited to the top 50
 
 ### GET `/leaderboard/alliance/{mode}`
 
-Get the global Alliance leaderboard, limited to the top 50.
+Retrieve the global Alliance leaderboard, limited to the top 50 entries.
 
 #### Request
 
-* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+* `mode` in the URL represents the time range and is an enumeration with any of the following values:
   - `today`
   - `week`
   - `month`
   - `all-time`
 * Example URL (today's Alliance leaderboard): `/leaderboard/alliance/today`
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 [
@@ -1215,7 +1215,7 @@ Get the global Alliance leaderboard, limited to the top 50.
     "id": 165,
     // string: Alliance name
     "name": "bapo",
-    // int: Number of painted pixels
+    // int: Number of pixels painted
     "pixelsPainted": 771030
   },
   {
@@ -1228,19 +1228,19 @@ Get the global Alliance leaderboard, limited to the top 50.
 
 ### GET `/leaderboard/region/players/{city}/{mode}`
 
-Get the player leaderboard for a city, limited to the top 50.
+Retrieve the top 50 players on the leaderboard for a specific city.
 
 #### Request
 
-* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+* `mode` in the URL represents the time range and is an enumeration with any of the following values:
   - `today`
   - `week`
   - `month`
   - `all-time`
-* The `city` in the URL is the city ID, there is no clear list correspondence yet, because there are too many cities.
-* Example URL (Shenzhen player overall leaderboard): `/leaderboard/region/players/114594/all-time`
+* `city` in the URL is the city ID. Currently, there is no definitive list available due to the sheer number of cities.
+* Example URL (Shenzhen overall player leaderboard): `/leaderboard/region/players/114594/all-time`
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 [
@@ -1271,19 +1271,19 @@ Get the player leaderboard for a city, limited to the top 50.
 
 ### GET `/leaderboard/region/alliances/{city}/{mode}`
 
-Get the Alliance leaderboard for a city, limited to the top 50.
+Retrieve the Alliance leaderboard for a specific city, limited to the top 50 entries.
 
 #### Request
 
-* The `mode` in the URL represents the time range, which is an enum and can be any of the following values:
+* `mode` in the URL represents the time range and is an enumeration with any of the following values:
   - `today`
   - `week`
   - `month`
   - `all-time`
-* The `city` in the URL is the city ID, there is no clear list correspondence yet, because there are too many cities.
-* Example URL (Shenzhen Alliance overall leaderboard): `/leaderboard/region/alliances/114594/all-time`
+* `city` in the URL is the city ID. Currently, there is no definitive list available due to the sheer number of cities.
+* Example URL (Shenzhen Alliance Overall Leaderboard): `/leaderboard/region/alliances/114594/all-time`
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 [
@@ -1303,9 +1303,9 @@ Get the Alliance leaderboard for a city, limited to the top 50.
 
 ### GET `/s0/tile/random`
 
-Get a random painted pixel
+Retrieve a randomly selected painted pixel
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -1322,19 +1322,19 @@ Get a random painted pixel
 }
 ```
 
-The relationship between Tile and pixel position, refer to [Tiles](#tiles)
+For the relationship between Tile and pixel positions, refer to [Tiles](#tiles)
 
 ### GET `/s0/pixel/{tileX}/{tileY}?x={x}&y={y}`
 
-Get information about a pixel point
+Retrieve information about a specific pixel
 
 #### Request
 
-* tileX and tileY in the URL need to be tile coordinates, related information refer to [Tiles](#tiles)
-* x and y parameters are pixel relative coordinates, need to be within 1024 range
-* Example URL (a location in Shenzhen): `/s0/pixel/1672/892?x=668&y=265`
+* tileX and tileY in the URL must be tile coordinates. For details, refer to [Tiles](#Tiles)
+* The x and y parameters represent relative pixel coordinates within a 1024-pixel range
+* Example URL (location in Shenzhen): `/s0/pixel/1672/892?x=668&y=265`
 
-#### Successful Return
+#### Response upon successful request
 
 Painted
 
@@ -1346,11 +1346,11 @@ Painted
 		"id": 1,
 		// string: Username
 		"name": "崔龙海",
-		// int: Alliance ID, if none then 0
+		// int: Alliance ID (0 if none)
 		"allianceId": 1,
-		// string: Alliance name, if none then empty string
+		// string: Alliance name (empty string if none)
 		"allianceName": "Team ReaIB",
-		// int: Flag ID, refer to appendix for correspondence
+		// int: Flag ID (refer to appendix for mapping)
 		"equippedFlag": 0
 	},
 	// object: Region information
@@ -1392,14 +1392,14 @@ Not painted (transparent)
 
 ### GET `/files/s0/tiles/{tileX}/{tileY}.png`
 
-Get the texture of a [tile](#tiles)
+Retrieve a texture for a specific [tile](#tiles)
 
 #### Request
 
-* tileX and tileY in the URL need to be tile coordinates, related information refer to [Tiles](#tiles)
+* `tileX` and `tileY` in the URL must be tile coordinates. Refer to [Tiles](#Tiles) for details.
 * Example URL: `/files/s0/tiles/1672/892.png`
 
-#### Successful Return
+#### Response upon successful request
 
 ![ex](/images/892.png)
 
@@ -1407,22 +1407,22 @@ Get the texture of a [tile](#tiles)
 
 Paint pixels
 
-Need to add anti-cheat request headers `x-pawtect-variant` and `x-pawtect-token`, please refer to [Anti-cheat](#anti-cheat)
+You must include the anti-cheat request headers `x-pawtect-variant` and `x-pawtect-token`. See [Anti-Cheat](#anti-cheating) for details.
 
 #### Request
 
-* Requires authentication with `j`
-* tileX and tileY in the URL need to be tile coordinates, related information refer to [Tiles](#tiles)
+* Requires `j` for authentication
+* `tileX` and `tileY` in the URL must be tile coordinates. See [Tiles](#tiles) for details.
 * Example URL: `/s0/pixel/1672/892`
 
 #### Request Example
 
 ```jsonc
 {
-    // array: Paint color IDs, each value corresponds to a pixel
+    // array: Color IDs to paint, each value corresponds to one pixel
 	"colors": [49, 49, 49, 49, 49, 49],
-	// array: Paint coordinates, format is x, y, x, y, appearing in pairs as (x, y)
-	// The coordinate order corresponds one-to-one with colors, that is, the Nth color is applied to the Nth coordinate
+	// array: Coordinates to paint, formatted as x, y, x, y, appearing in (x, y) pairs
+	// Coordinate order corresponds one-to-one with colors, i.e., the Nth color applies to the Nth coordinate
 	"coords": [
       140, 359, 
       141, 359, 
@@ -1438,15 +1438,15 @@ Need to add anti-cheat request headers `x-pawtect-variant` and `x-pawtect-token`
 }
 ```
 
-> `colors` corresponds one-to-one with the color codes in `coords`, refer to [Colors](#colors) and [Appendix](#all-color-tables)
+> `colors` corresponds to the color codes used in rendering, paired with `coords`. Refer to [Colors](#colors) and [Appendix](#full-color-palette)
 >
-> When painting colors across multiple [tiles](#tiles), multiple requests will be made
+> When painting colors spanning multiple [tiles](#tiles), requests may be split across multiple calls
 >
-> For captcha token, refer to [Turnstile](#turnstile---captcha)
-> For `fp`, refer to [Browser Fingerprint](#fingerprintjs---browser-fingerprint)
-> For `x-pawtect-token` and `x-pawtect-variant`, refer to [pawtect](#pawtect)
+> For the verification token, see [Turnstile](#turnstile---captcha)
+> `fp`: See [Browser Fingerprint](#fingerprintjs---browser-fingerprinting)
+> `x-pawtect-token` and `x-pawtect-variant`: See [pawtect](#pawtect)
 
-#### Successful Return
+#### Response upon successful request
 
 ```jsonc
 {
@@ -1454,7 +1454,7 @@ Need to add anti-cheat request headers `x-pawtect-variant` and `x-pawtect-token`
 }
 ```
 
-#### Error Return
+#### Returned when a request error occurs
 
 ```jsonc
 {
@@ -1463,27 +1463,27 @@ Need to add anti-cheat request headers `x-pawtect-variant` and `x-pawtect-token`
 }
 ```
 
-> Captcha token or pawtect invalid
+> Invalid verification code token or pawtect
 
 ### POST `/report-user`
 
-<img src="/images/staffscreen.png" align="right" width="500">
+<img src="/images/staffscreen.png" align="right" width="500" alt="staffscreen">
 
-Report user. When reporting, the client will render a screenshot, and customer service can see the client's screenshot and live screenshot when viewing.
+Report a user. When reporting, the client renders a screenshot. Mods can view both the client screenshot and the live screenshot during review.
 
-Customer service can see all users under the reported user's IP.
+Mods can see all users under the IP address of the reported user.
 
 #### Request
 
-* Requires authentication with `j`
-* Request body is multipart body
-  - `reportedUserId`: Reported user ID
+* Requires `j` to complete authentication
+* Request body is multipart
+  - `reportedUserId`: ID of the reported user
   - `latitude`: Latitude
   - `longitude`: Longitude
-  - `zoom`: Zoom
-  - `reason`: Report reason
-  - `notes`: Report text, users can actively enter
-  - `image`: A report screenshot rendered by the client will be displayed on the customer service page
+  - `zoom`: Zoom level
+  - `reason`: Reason for reporting
+  - `notes`: Report text, user-provided input
+  - `image`: A screenshot rendered by the client will display on the mods' page
 
 #### Request Example
 
@@ -1498,7 +1498,7 @@ curl -X POST "https://backend.wplace.live/report-user" \
   -F "zoom=15.812584063490982" \
   -F "reason=griefing" \
   -F "notes=Messed up artworks for no reason" \
-  -F "image=@图片;type=image/jpeg"
+  -F "image=@image;type=image/jpeg"
 ```
 
 Raw request body
@@ -1536,13 +1536,13 @@ Content-Type: image/jpeg
 ------boundary--
 ```
 
-## Anti Cheat
+## Anti-Cheating
 
-For the [/s0/pixel/{tileX}/{tileY}](#post-s0pixeltilextiley) interface, wplace adds multiple anti-cheat measures to prevent automatic painting and multiple accounts.
+Multiple anti-cheating measures have been added to the wplace endpoint for the [/s0/pixel/{tileX}/{tileY}](#post-s0pixeltilextiley) endpoint to prevent automated drawing and multiple accounts.
 
 ### `lp` - LocalStorage Detection
 
-After logging in, Local Storage will write the `lp` field, which is a base64 encoded json. After decoding, you can see:
+After login, LocalStorage writes an `lp` field containing a base64-encoded JSON. Decoding reveals:
 
 ```json
 {
@@ -1551,37 +1551,39 @@ After logging in, Local Storage will write the `lp` field, which is a base64 enc
 }
 ```
 
-It contains your user ID and login timestamp. When you try to submit a paint but the user ID and Local Storage are inconsistent, you will be prompted not to use multiple accounts to paint.
+This contains your user ID and login timestamp. Attempting to submit a painting request with a user ID that doesn't match Local Storage will trigger a warning against using multiple accounts.
 
-#### Solution
+#### Solutions
 
-- For robots or scripts that don't run in browsers, just ignore it
+- Ignore this if using bots or scripts not running in browsers
 - Use multiple [browser profiles](https://support.google.com/chrome/answer/2364824)
-- Delete `lp` from Local Storage when switching accounts
+- When switching accounts, delete `lp` from Local Storage
 
 ### Turnstile - Captcha
 
-<img src="/images/captcha.png" align="right" width="400">
+<img src="/images/captcha.png" align="right" width="400" alt="captcha">
 
 wplace uses [Turnstile Captcha](https://www.cloudflare.com/application-services/products/turnstile/), and after each painting, the saved captcha will be cleared on the frontend.
 
-Generally speaking, this captcha will not pop up frequently, but if the server is under high load and Under Attack mode is started, it will pop up before each painting.
+Typically, this Captcha doesn't appear frequently. However, if the server is under high load and activates Under Attack mode, it will appear before each painting.
 
-#### Solution
+Site Key: `0x4AAAAAABpqJe8FO0N84q0F`
 
-- Paid automatic captcha passing API through captcha platform
-- Capture the `cf-turnstile-response` field in `https://challenges.cloudflare.com` through man-in-the-middle proxy (when the server has not enabled Under Attack mode)
-- Open a browser to hang scripts automatically and send back to the client through browser plugins.
+#### Solutions
 
-### FingerprintJS - Browser Fingerprint
+- Use a paid captcha-solving platform's API for automatic verification
+- Scrape the `cf-turnstile-response` field from `https://challenges.cloudflare.com` via a man-in-the-middle proxy (when the server isn't in Under Attack mode)
+- Manually open a browser with a script to automatically refresh, then send the response back to the client via a browser plugin.
 
-<img src="/images/FingerprintJS.png" align="right" width="400">
+### FingerprintJS -  Browser Fingerprinting
 
-wplace uses [FingerprintJS](https://fingerprint.com/) to report `visitorId` (fp field) to detect multiple accounts and robots.
+<img src="/images/FingerprintJS.png" align="right" width="400" alt="FingerprintJS">
 
-That is, through data such as `User-Agent`, `screen resolution`, `time zone`, etc., to detect whether the browser is headless, anonymous mode, etc.
+wplace uses [FingerprintJS](https://fingerprint.com/) to report the `visitorId` (fp field) for detecting multiple accounts and bots.
 
-And there is a `0.001%` chance of selling your information to FingerprintJS providers.
+This involves checking browser data like `User-Agent`, `screen resolution`, and `time zone` to identify headless browsers or incognito mode.
+
+Additionally, there's a `0.001%` chance your information may be sold to FingerprintJS's provider.
 
 ```javascript
 function Q8() {
@@ -1599,22 +1601,23 @@ function Q8() {
 }
 ```
 
-> Real code in Wplace's JS, 0.001% chance of uploading your statistics to FingerprintJS server
+> Actual code in Wplace's JS with a 0.001% chance of uploading your statistics to FingerprintJS servers
 
 #### Solution
 
-- Strictly speaking, wplace has not fully enabled this detection because only one `visitorId` (an MD5 value) is uploaded. Theoretically, any MD5 can pass because this value cannot be verified from the server side. However, to prevent being detected as multiple accounts, it is recommended to use `MD5(userId + salt)`
+- Strictly speaking, Wplace hasn't fully enabled this detection yet since it only uploads a `visitorId` (an MD5 value). Theoretically, any MD5 could pass because this value can't be verified on the server side. However, to prevent detection of multiple accounts, it's recommended to use `MD5(userId + salt)`.
 
 ### Pawtect
 
-Pawtect is a WASM module based on Rust introduced by wplace's latest and hottest technology. Its sample can be viewed in [pawtect_wasm_bg.wasm](files/pawtect_wasm_bg.wasm). It is used to sign the request body before requesting, and then send it to the server together with the request header.
+Pawtect is the latest and hottest Rust-based WASM module introduced to Wplace. Its sample can be viewed at [pawtect_wasm_bg.wasm](files/pawtect_wasm_bg.wasm). It signs the request body before sending it to the server along with the request header.
 
-Some users will not enable this check. If you want to know whether an account has enabled this check, you need to first request [/me](#get-me) to obtain the `experiments` information. If the `variant` is disabled, you only need to pass `x-pawtect-variant: disabled` when requesting, otherwise you need to pass both `x-pawtect-variant` and `x-pawtect-token` request headers.
+Some users may disable this check. To determine if an account has it enabled, first request [/me](#get-me) to obtain the `experiments` information. If the `variant` is `disabled`, only `x-pawtect-variant: disabled` is required in the request header. Otherwise, both `x-pawtect-variant` and `x-pawtect-token` headers are needed.
 
-#### Solution
+#### Solutions
 
-- Directly capture through real browser (man-in-the-middle proxy or browser plugin)
-- Implement signature by loading WASM module through reference code below (if your script is developed using nodejs)
+- Directly capture data via a real browser (using a man-in-the-middle proxy or browser plugin)
+- If you're developing in Java, use the pure Java Pawtect implementation in this repository: [Pawtect.java](pawtect-java/Pawtect.java) (requires Bouncy Castle)
+- Load the WASM module using the reference code below to implement signing (if your script is developed in Node.js)
 
 #### Reference Code
 
@@ -1749,7 +1752,7 @@ function postPaw(url, bodyStr, userId) {
 
 ## Appendix
 
-### Common API Errors
+### General Api Errors
 
 ```jsonc
 {
@@ -1758,7 +1761,7 @@ function postPaw(url, bodyStr, userId) {
 }
 ```
 
-> `j` token not attached or token invalid
+> No `j` token provided or invalid token
 
 
 ```jsonc
@@ -1779,71 +1782,71 @@ function postPaw(url, bodyStr, userId) {
 
 > Request format error
 
-### All Color Tables
-| Color | ID | RGB | Paid    |
-|------|------| ------- |---------|
-| | `0` | Transparent | `false` |
-| ![#000000](https://img.shields.io/badge/-%20-000000?style=flat-square) | `1` | `0, 0, 0` | `false` |
-| ![#3c3c3c](https://img.shields.io/badge/-%20-3c3c3c?style=flat-square) | `2` | `60, 60, 60` | `false` |
-| ![#787878](https://img.shields.io/badge/-%20-787878?style=flat-square) | `3` | `120, 120, 120` | `false` |
-| ![#d2d2d2](https://img.shields.io/badge/-%20-d2d2d2?style=flat-square) | `4` | `210, 210, 210` | `false` |
-| ![#ffffff](https://img.shields.io/badge/-%20-ffffff?style=flat-square) | `5` | `255, 255, 255` | `false` |
-| ![#600018](https://img.shields.io/badge/-%20-600018?style=flat-square) | `6` | `96, 0, 24` | `false` |
-| ![#ed1c24](https://img.shields.io/badge/-%20-ed1c24?style=flat-square) | `7` | `237, 28, 36` | `false` |
-| ![#ff7f27](https://img.shields.io/badge/-%20-ff7f27?style=flat-square) | `8` | `255, 127, 39` | `false` |
-| ![#f6aa09](https://img.shields.io/badge/-%20-f6aa09?style=flat-square) | `9` | `246, 170, 9` | `false` |
-| ![#f9dd3b](https://img.shields.io/badge/-%20-f9dd3b?style=flat-square) | `10` | `249, 221, 59` | `false` |
+### Full Color Palette
+| Color                                                                  | ID   | RGB             | Paid    |
+|------------------------------------------------------------------------|------|-----------------|---------|
+|                                                                        | `0`  | Transparent     | `false` |
+| ![#000000](https://img.shields.io/badge/-%20-000000?style=flat-square) | `1`  | `0, 0, 0`       | `false` |
+| ![#3c3c3c](https://img.shields.io/badge/-%20-3c3c3c?style=flat-square) | `2`  | `60, 60, 60`    | `false` |
+| ![#787878](https://img.shields.io/badge/-%20-787878?style=flat-square) | `3`  | `120, 120, 120` | `false` |
+| ![#d2d2d2](https://img.shields.io/badge/-%20-d2d2d2?style=flat-square) | `4`  | `210, 210, 210` | `false` |
+| ![#ffffff](https://img.shields.io/badge/-%20-ffffff?style=flat-square) | `5`  | `255, 255, 255` | `false` |
+| ![#600018](https://img.shields.io/badge/-%20-600018?style=flat-square) | `6`  | `96, 0, 24`     | `false` |
+| ![#ed1c24](https://img.shields.io/badge/-%20-ed1c24?style=flat-square) | `7`  | `237, 28, 36`   | `false` |
+| ![#ff7f27](https://img.shields.io/badge/-%20-ff7f27?style=flat-square) | `8`  | `255, 127, 39`  | `false` |
+| ![#f6aa09](https://img.shields.io/badge/-%20-f6aa09?style=flat-square) | `9`  | `246, 170, 9`   | `false` |
+| ![#f9dd3b](https://img.shields.io/badge/-%20-f9dd3b?style=flat-square) | `10` | `249, 221, 59`  | `false` |
 | ![#fffabc](https://img.shields.io/badge/-%20-fffabc?style=flat-square) | `11` | `255, 250, 188` | `false` |
-| ![#0eb968](https://img.shields.io/badge/-%20-0eb968?style=flat-square) | `12` | `14, 185, 104` | `false` |
-| ![#13e67b](https://img.shields.io/badge/-%20-13e67b?style=flat-square) | `13` | `19, 230, 123` | `false` |
-| ![#87ff5e](https://img.shields.io/badge/-%20-87ff5e?style=flat-square) | `14` | `135, 255, 94` | `false` |
-| ![#0c816e](https://img.shields.io/badge/-%20-0c816e?style=flat-square) | `15` | `12, 129, 110` | `false` |
-| ![#10aea6](https://img.shields.io/badge/-%20-10aea6?style=flat-square) | `16` | `16, 174, 166` | `false` |
-| ![#13e1be](https://img.shields.io/badge/-%20-13e1be?style=flat-square) | `17` | `19, 225, 190` | `false` |
-| ![#28509e](https://img.shields.io/badge/-%20-28509e?style=flat-square) | `18` | `40, 80, 158` | `false` |
-| ![#4093e4](https://img.shields.io/badge/-%20-4093e4?style=flat-square) | `19` | `64, 147, 228` | `false` |
-| ![#60f7f2](https://img.shields.io/badge/-%20-60f7f2?style=flat-square) | `20` | `96, 247, 242` | `false` |
-| ![#6b50f6](https://img.shields.io/badge/-%20-6b50f6?style=flat-square) | `21` | `107, 80, 246` | `false` |
+| ![#0eb968](https://img.shields.io/badge/-%20-0eb968?style=flat-square) | `12` | `14, 185, 104`  | `false` |
+| ![#13e67b](https://img.shields.io/badge/-%20-13e67b?style=flat-square) | `13` | `19, 230, 123`  | `false` |
+| ![#87ff5e](https://img.shields.io/badge/-%20-87ff5e?style=flat-square) | `14` | `135, 255, 94`  | `false` |
+| ![#0c816e](https://img.shields.io/badge/-%20-0c816e?style=flat-square) | `15` | `12, 129, 110`  | `false` |
+| ![#10aea6](https://img.shields.io/badge/-%20-10aea6?style=flat-square) | `16` | `16, 174, 166`  | `false` |
+| ![#13e1be](https://img.shields.io/badge/-%20-13e1be?style=flat-square) | `17` | `19, 225, 190`  | `false` |
+| ![#28509e](https://img.shields.io/badge/-%20-28509e?style=flat-square) | `18` | `40, 80, 158`   | `false` |
+| ![#4093e4](https://img.shields.io/badge/-%20-4093e4?style=flat-square) | `19` | `64, 147, 228`  | `false` |
+| ![#60f7f2](https://img.shields.io/badge/-%20-60f7f2?style=flat-square) | `20` | `96, 247, 242`  | `false` |
+| ![#6b50f6](https://img.shields.io/badge/-%20-6b50f6?style=flat-square) | `21` | `107, 80, 246`  | `false` |
 | ![#99b1fb](https://img.shields.io/badge/-%20-99b1fb?style=flat-square) | `22` | `153, 177, 251` | `false` |
-| ![#780c99](https://img.shields.io/badge/-%20-780c99?style=flat-square) | `23` | `120, 12, 153` | `false` |
-| ![#aa38b9](https://img.shields.io/badge/-%20-aa38b9?style=flat-square) | `24` | `170, 56, 185` | `false` |
+| ![#780c99](https://img.shields.io/badge/-%20-780c99?style=flat-square) | `23` | `120, 12, 153`  | `false` |
+| ![#aa38b9](https://img.shields.io/badge/-%20-aa38b9?style=flat-square) | `24` | `170, 56, 185`  | `false` |
 | ![#e09ff9](https://img.shields.io/badge/-%20-e09ff9?style=flat-square) | `25` | `224, 159, 249` | `false` |
-| ![#cb007a](https://img.shields.io/badge/-%20-cb007a?style=flat-square) | `26` | `203, 0, 122` | `false` |
-| ![#ec1f80](https://img.shields.io/badge/-%20-ec1f80?style=flat-square) | `27` | `236, 31, 128` | `false` |
+| ![#cb007a](https://img.shields.io/badge/-%20-cb007a?style=flat-square) | `26` | `203, 0, 122`   | `false` |
+| ![#ec1f80](https://img.shields.io/badge/-%20-ec1f80?style=flat-square) | `27` | `236, 31, 128`  | `false` |
 | ![#f38da9](https://img.shields.io/badge/-%20-f38da9?style=flat-square) | `28` | `243, 141, 169` | `false` |
-| ![#684634](https://img.shields.io/badge/-%20-684634?style=flat-square) | `29` | `104, 70, 52` | `false` |
-| ![#95682a](https://img.shields.io/badge/-%20-95682a?style=flat-square) | `30` | `149, 104, 42` | `false` |
+| ![#684634](https://img.shields.io/badge/-%20-684634?style=flat-square) | `29` | `104, 70, 52`   | `false` |
+| ![#95682a](https://img.shields.io/badge/-%20-95682a?style=flat-square) | `30` | `149, 104, 42`  | `false` |
 | ![#f8b277](https://img.shields.io/badge/-%20-f8b277?style=flat-square) | `31` | `248, 178, 119` | `false` |
 | ![#aaaaaa](https://img.shields.io/badge/-%20-aaaaaa?style=flat-square) | `32` | `170, 170, 170` | `true`  |
-| ![#a50e1e](https://img.shields.io/badge/-%20-a50e1e?style=flat-square) | `33` | `165, 14, 30` | `true`  |
+| ![#a50e1e](https://img.shields.io/badge/-%20-a50e1e?style=flat-square) | `33` | `165, 14, 30`   | `true`  |
 | ![#fa8072](https://img.shields.io/badge/-%20-fa8072?style=flat-square) | `34` | `250, 128, 114` | `true`  |
-| ![#e45c1a](https://img.shields.io/badge/-%20-e45c1a?style=flat-square) | `35` | `228, 92, 26` | `true`  |
+| ![#e45c1a](https://img.shields.io/badge/-%20-e45c1a?style=flat-square) | `35` | `228, 92, 26`   | `true`  |
 | ![#d6b594](https://img.shields.io/badge/-%20-d6b594?style=flat-square) | `36` | `214, 181, 148` | `true`  |
-| ![#9c8431](https://img.shields.io/badge/-%20-9c8431?style=flat-square) | `37` | `156, 132, 49` | `true`  |
-| ![#c5ad31](https://img.shields.io/badge/-%20-c5ad31?style=flat-square) | `38` | `197, 173, 49` | `true`  |
-| ![#e8d45f](https://img.shields.io/badge/-%20-e8d45f?style=flat-square) | `39` | `232, 212, 95` | `true`  |
-| ![#4a6b3a](https://img.shields.io/badge/-%20-4a6b3a?style=flat-square) | `40` | `74, 107, 58` | `true`  |
-| ![#5a944a](https://img.shields.io/badge/-%20-5a944a?style=flat-square) | `41` | `90, 148, 74` | `true`  |
+| ![#9c8431](https://img.shields.io/badge/-%20-9c8431?style=flat-square) | `37` | `156, 132, 49`  | `true`  |
+| ![#c5ad31](https://img.shields.io/badge/-%20-c5ad31?style=flat-square) | `38` | `197, 173, 49`  | `true`  |
+| ![#e8d45f](https://img.shields.io/badge/-%20-e8d45f?style=flat-square) | `39` | `232, 212, 95`  | `true`  |
+| ![#4a6b3a](https://img.shields.io/badge/-%20-4a6b3a?style=flat-square) | `40` | `74, 107, 58`   | `true`  |
+| ![#5a944a](https://img.shields.io/badge/-%20-5a944a?style=flat-square) | `41` | `90, 148, 74`   | `true`  |
 | ![#84c573](https://img.shields.io/badge/-%20-84c573?style=flat-square) | `42` | `132, 197, 115` | `true`  |
-| ![#0f799f](https://img.shields.io/badge/-%20-0f799f?style=flat-square) | `43` | `15, 121, 159` | `true`  |
+| ![#0f799f](https://img.shields.io/badge/-%20-0f799f?style=flat-square) | `43` | `15, 121, 159`  | `true`  |
 | ![#bbfaf2](https://img.shields.io/badge/-%20-bbfaf2?style=flat-square) | `44` | `187, 250, 242` | `true`  |
 | ![#7dc7ff](https://img.shields.io/badge/-%20-7dc7ff?style=flat-square) | `45` | `125, 199, 255` | `true`  |
-| ![#4d31b8](https://img.shields.io/badge/-%20-4d31b8?style=flat-square) | `46` | `77, 49, 184` | `true`  |
-| ![#4a4284](https://img.shields.io/badge/-%20-4a4284?style=flat-square) | `47` | `74, 66, 132` | `true`  |
+| ![#4d31b8](https://img.shields.io/badge/-%20-4d31b8?style=flat-square) | `46` | `77, 49, 184`   | `true`  |
+| ![#4a4284](https://img.shields.io/badge/-%20-4a4284?style=flat-square) | `47` | `74, 66, 132`   | `true`  |
 | ![#7a71c4](https://img.shields.io/badge/-%20-7a71c4?style=flat-square) | `48` | `122, 113, 196` | `true`  |
 | ![#b5aef1](https://img.shields.io/badge/-%20-b5aef1?style=flat-square) | `49` | `181, 174, 241` | `true`  |
-| ![#dba463](https://img.shields.io/badge/-%20-dba463?style=flat-square) | `50` | `219, 164, 99` | `true`  |
-| ![#d18051](https://img.shields.io/badge/-%20-d18051?style=flat-square) | `51` | `209, 128, 81` | `true`  |
+| ![#dba463](https://img.shields.io/badge/-%20-dba463?style=flat-square) | `50` | `219, 164, 99`  | `true`  |
+| ![#d18051](https://img.shields.io/badge/-%20-d18051?style=flat-square) | `51` | `209, 128, 81`  | `true`  |
 | ![#ffc5a5](https://img.shields.io/badge/-%20-ffc5a5?style=flat-square) | `52` | `255, 197, 165` | `true`  |
-| ![#9b5249](https://img.shields.io/badge/-%20-9b5249?style=flat-square) | `53` | `155, 82, 73` | `true`  |
+| ![#9b5249](https://img.shields.io/badge/-%20-9b5249?style=flat-square) | `53` | `155, 82, 73`   | `true`  |
 | ![#d18078](https://img.shields.io/badge/-%20-d18078?style=flat-square) | `54` | `209, 128, 120` | `true`  |
 | ![#fab6a4](https://img.shields.io/badge/-%20-fab6a4?style=flat-square) | `55` | `250, 182, 164` | `true`  |
-| ![#7b6352](https://img.shields.io/badge/-%20-7b6352?style=flat-square) | `56` | `123, 99, 82` | `true`  |
+| ![#7b6352](https://img.shields.io/badge/-%20-7b6352?style=flat-square) | `56` | `123, 99, 82`   | `true`  |
 | ![#9c846b](https://img.shields.io/badge/-%20-9c846b?style=flat-square) | `57` | `156, 132, 107` | `true`  |
-| ![#333941](https://img.shields.io/badge/-%20-333941?style=flat-square) | `58` | `51, 57, 65` | `true`  |
+| ![#333941](https://img.shields.io/badge/-%20-333941?style=flat-square) | `58` | `51, 57, 65`    | `true`  |
 | ![#6d758d](https://img.shields.io/badge/-%20-6d758d?style=flat-square) | `59` | `109, 117, 141` | `true`  |
 | ![#b3b9d1](https://img.shields.io/badge/-%20-b3b9d1?style=flat-square) | `60` | `179, 185, 209` | `true`  |
-| ![#6d643f](https://img.shields.io/badge/-%20-6d643f?style=flat-square) | `61` | `109, 100, 63` | `true`  |
+| ![#6d643f](https://img.shields.io/badge/-%20-6d643f?style=flat-square) | `61` | `109, 100, 63`  | `true`  |
 | ![#948c6b](https://img.shields.io/badge/-%20-948c6b?style=flat-square) | `62` | `148, 140, 107` | `true`  |
 | ![#cdc59e](https://img.shields.io/badge/-%20-cdc59e?style=flat-square) | `63` | `205, 197, 158` | `true`  |
 
@@ -1875,9 +1878,9 @@ public class WplaceBitMap {
         int realIndex = bytes.length - 1 - byteIndex;
 
         if (value) {
-            bytes[realIndex] |= (1 << bitIndex);
+            bytes[realIndex] |= (byte) (1 << bitIndex);
         } else {
-            bytes[realIndex] &= ~(1 << bitIndex);
+            bytes[realIndex] &= (byte) ~(1 << bitIndex);
         }
     }
 
@@ -1902,256 +1905,256 @@ public class WplaceBitMap {
 ### All Flags
 
 
-| Flag | Region Code | ID  |
-|---|------|-----|
-| 🇦🇫 | `AF` | `1` |
-| 🇦🇱 | `AL` | `2` |
-| 🇩🇿 | `DZ` | `3` |
-| 🇦🇸 | `AS` | `4` |
-| 🇦🇩 | `AD` | `5` |
-| 🇦🇴 | `AO` | `6` |
-| 🇦🇮 | `AI` | `7` |
-| 🇦🇶 | `AQ` | `8` |
-| 🇦🇬 | `AG` | `9` |
-| 🇦🇷 | `AR` | `10` |
-| 🇦🇲 | `AM` | `11` |
-| 🇦🇼 | `AW` | `12` |
-| 🇦🇺 | `AU` | `13` |
-| 🇦🇹 | `AT` | `14` |
-| 🇦🇿 | `AZ` | `15` |
-| 🇧🇸 | `BS` | `16` |
-| 🇧🇭 | `BH` | `17` |
-| 🇧🇩 | `BD` | `18` |
-| 🇧🇧 | `BB` | `19` |
-| 🇧🇾 | `BY` | `20` |
-| 🇧🇪 | `BE` | `21` |
-| 🇧🇿 | `BZ` | `22` |
-| 🇧🇯 | `BJ` | `23` |
-| 🇧🇲 | `BM` | `24` |
-| 🇧🇹 | `BT` | `25` |
-| 🇧🇴 | `BO` | `26` |
-| 🇧🇶 | `BQ` | `27` |
-| 🇧🇦 | `BA` | `28` |
-| 🇧🇼 | `BW` | `29` |
-| 🇧🇻 | `BV` | `30` |
-| 🇧🇷 | `BR` | `31` |
-| 🇮🇴 | `IO` | `32` |
-| 🇧🇳 | `BN` | `33` |
-| 🇧🇬 | `BG` | `34` |
-| 🇧🇫 | `BF` | `35` |
-| 🇧🇮 | `BI` | `36` |
-| 🇨🇻 | `CV` | `37` |
-| 🇰🇭 | `KH` | `38` |
-| 🇨🇲 | `CM` | `39` |
-| 🇨🇦 | `CA` | `40` |
-| 🇰🇾 | `KY` | `41` |
-| 🇨🇫 | `CF` | `42` |
-| 🇹🇩 | `TD` | `43` |
-| 🇨🇱 | `CL` | `44` |
-| 🇨🇳 | `CN` | `45` |
-| 🇨🇽 | `CX` | `46` |
-| 🇨🇨 | `CC` | `47` |
-| 🇨🇴 | `CO` | `48` |
-| 🇰🇲 | `KM` | `49` |
-| 🇨🇬 | `CG` | `50` |
-| 🇨🇰 | `CK` | `51` |
-| 🇨🇷 | `CR` | `52` |
-| 🇭🇷 | `HR` | `53` |
-| 🇨🇺 | `CU` | `54` |
-| 🇨🇼 | `CW` | `55` |
-| 🇨🇾 | `CY` | `56` |
-| 🇨🇿 | `CZ` | `57` |
-| 🇨🇮 | `CI` | `58` |
-| 🇩🇰 | `DK` | `59` |
-| 🇩🇯 | `DJ` | `60` |
-| 🇩🇲 | `DM` | `61` |
-| 🇩🇴 | `DO` | `62` |
-| 🇪🇨 | `EC` | `63` |
-| 🇪🇬 | `EG` | `64` |
-| 🇸🇻 | `SV` | `65` |
-| 🇬🇶 | `GQ` | `66` |
-| 🇪🇷 | `ER` | `67` |
-| 🇪🇪 | `EE` | `68` |
-| 🇸🇿 | `SZ` | `69` |
-| 🇪🇹 | `ET` | `70` |
-| 🇫🇰 | `FK` | `71` |
-| 🇫🇴 | `FO` | `72` |
-| 🇫🇯 | `FJ` | `73` |
-| 🇫🇮 | `FI` | `74` |
-| 🇫🇷 | `FR` | `75` |
-| 🇬🇫 | `GF` | `76` |
-| 🇵🇫 | `PF` | `77` |
-| 🇹🇫 | `TF` | `78` |
-| 🇬🇦 | `GA` | `79` |
-| 🇬🇲 | `GM` | `80` |
-| 🇬🇪 | `GE` | `81` |
-| 🇩🇪 | `DE` | `82` |
-| 🇬🇭 | `GH` | `83` |
-| 🇬🇮 | `GI` | `84` |
-| 🇬🇷 | `GR` | `85` |
-| 🇬🇱 | `GL` | `86` |
-| 🇬🇩 | `GD` | `87` |
-| 🇬🇵 | `GP` | `88` |
-| 🇬🇺 | `GU` | `89` |
-| 🇬🇹 | `GT` | `90` |
-| 🇬🇬 | `GG` | `91` |
-| 🇬🇳 | `GN` | `92` |
-| 🇬🇼 | `GW` | `93` |
-| 🇬🇾 | `GY` | `94` |
-| 🇭🇹 | `HT` | `95` |
-| 🇭🇲 | `HM` | `96` |
-| 🇭🇳 | `HN` | `97` |
-| 🇭🇰 | `HK` | `98` |
-| 🇭🇺 | `HU` | `99` |
-| 🇮🇸 | `IS` | `100` |
-| 🇮🇳 | `IN` | `101` |
-| 🇮🇩 | `ID` | `102` |
-| 🇮🇷 | `IR` | `103` |
-| 🇮🇶 | `IQ` | `104` |
-| 🇮🇪 | `IE` | `105` |
-| 🇮🇲 | `IM` | `106` |
-| 🇮🇱 | `IL` | `107` |
-| 🇮🇹 | `IT` | `108` |
-| 🇯🇲 | `JM` | `109` |
-| 🇯🇵 | `JP` | `110` |
-| 🇯🇪 | `JE` | `111` |
-| 🇯🇴 | `JO` | `112` |
-| 🇰🇿 | `KZ` | `113` |
-| 🇰🇪 | `KE` | `114` |
-| 🇰🇮 | `KI` | `115` |
-| 🇽🇰 | `XK` | `116` |
-| 🇰🇼 | `KW` | `117` |
-| 🇰🇬 | `KG` | `118` |
-| 🇱🇦 | `LA` | `119` |
-| 🇱🇻 | `LV` | `120` |
-| 🇱🇧 | `LB` | `121` |
-| 🇱🇸 | `LS` | `122` |
-| 🇱🇷 | `LR` | `123` |
-| 🇱🇾 | `LY` | `124` |
-| 🇱🇮 | `LI` | `125` |
-| 🇱🇹 | `LT` | `126` |
-| 🇱🇺 | `LU` | `127` |
-| 🇲🇴 | `MO` | `128` |
-| 🇲🇬 | `MG` | `129` |
-| 🇲🇼 | `MW` | `130` |
-| 🇲🇾 | `MY` | `131` |
-| 🇲🇻 | `MV` | `132` |
-| 🇲🇱 | `ML` | `133` |
-| 🇲🇹 | `MT` | `134` |
-| 🇲🇭 | `MH` | `135` |
-| 🇲🇶 | `MQ` | `136` |
-| 🇲🇷 | `MR` | `137` |
-| 🇲🇺 | `MU` | `138` |
-| 🇾🇹 | `YT` | `139` |
-| 🇲🇽 | `MX` | `140` |
-| 🇫🇲 | `FM` | `141` |
-| 🇲🇩 | `MD` | `142` |
-| 🇲🇨 | `MC` | `143` |
-| 🇲🇳 | `MN` | `144` |
-| 🇲🇪 | `ME` | `145` |
-| 🇲🇸 | `MS` | `146` |
-| 🇲🇦 | `MA` | `147` |
-| 🇲🇿 | `MZ` | `148` |
-| 🇲🇲 | `MM` | `149` |
-| 🇳🇦 | `NA` | `150` |
-| 🇳🇷 | `NR` | `151` |
-| 🇳🇵 | `NP` | `152` |
-| 🇳🇱 | `NL` | `153` |
-| 🇳🇨 | `NC` | `154` |
-| 🇳🇿 | `NZ` | `155` |
-| 🇳🇮 | `NI` | `156` |
-| 🇳🇪 | `NE` | `157` |
-| 🇳🇬 | `NG` | `158` |
-| 🇳🇺 | `NU` | `159` |
-| 🇳🇫 | `NF` | `160` |
-| 🇰🇵 | `KP` | `161` |
-| 🇲🇰 | `MK` | `162` |
-| 🇲🇵 | `MP` | `163` |
-| 🇳🇴 | `NO` | `164` |
-| 🇴🇲 | `OM` | `165` |
-| 🇵🇰 | `PK` | `166` |
-| 🇵🇼 | `PW` | `167` |
-| 🇵🇸 | `PS` | `168` |
-| 🇵🇦 | `PA` | `169` |
-| 🇵🇬 | `PG` | `170` |
-| 🇵🇾 | `PY` | `171` |
-| 🇵🇪 | `PE` | `172` |
-| 🇵🇭 | `PH` | `173` |
-| 🇵🇳 | `PN` | `174` |
-| 🇵🇱 | `PL` | `175` |
-| 🇵🇹 | `PT` | `176` |
-| 🇵🇷 | `PR` | `177` |
-| 🇶🇦 | `QA` | `178` |
-| 🇨🇩 | `CD` | `179` |
-| 🇷🇴 | `RO` | `180` |
-| 🇷🇺 | `RU` | `181` |
-| 🇷🇼 | `RW` | `182` |
-| 🇷🇪 | `RE` | `183` |
-| 🇧🇱 | `BL` | `184` |
-| 🇸🇭 | `SH` | `185` |
-| 🇰🇳 | `KN` | `186` |
-| 🇱🇨 | `LC` | `187` |
-| 🇲🇫 | `MF` | `188` |
-| 🇵🇲 | `PM` | `189` |
-| 🇻🇨 | `VC` | `190` |
-| 🇼🇸 | `WS` | `191` |
-| 🇸🇲 | `SM` | `192` |
-| 🇸🇹 | `ST` | `193` |
-| 🇸🇦 | `SA` | `194` |
-| 🇸🇳 | `SN` | `195` |
-| 🇷🇸 | `RS` | `196` |
-| 🇸🇨 | `SC` | `197` |
-| 🇸🇱 | `SL` | `198` |
-| 🇸🇬 | `SG` | `199` |
-| 🇸🇽 | `SX` | `200` |
-| 🇸🇰 | `SK` | `201` |
-| 🇸🇮 | `SI` | `202` |
-| 🇸🇧 | `SB` | `203` |
-| 🇸🇴 | `SO` | `204` |
-| 🇿🇦 | `ZA` | `205` |
-| 🇬🇸 | `GS` | `206` |
-| 🇰🇷 | `KR` | `207` |
-| 🇸🇸 | `SS` | `208` |
-| 🇪🇸 | `ES` | `209` |
-| 🇱🇰 | `LK` | `210` |
-| 🇸🇩 | `SD` | `211` |
-| 🇸🇷 | `SR` | `212` |
-| 🇸🇯 | `SJ` | `213` |
-| 🇸🇪 | `SE` | `214` |
-| 🇨🇭 | `CH` | `215` |
-| 🇸🇾 | `SY` | `216` |
-| 🇨🇳 | `TW` | `217` |
-| 🇹🇯 | `TJ` | `218` |
-| 🇹🇿 | `TZ` | `219` |
-| 🇹🇭 | `TH` | `220` |
-| 🇹🇱 | `TL` | `221` |
-| 🇹🇬 | `TG` | `222` |
-| 🇹🇰 | `TK` | `223` |
-| 🇹🇴 | `TO` | `224` |
-| 🇹🇹 | `TT` | `225` |
-| 🇹🇳 | `TN` | `226` |
-| 🇹🇲 | `TM` | `227` |
-| 🇹🇨 | `TC` | `228` |
-| 🇹🇻 | `TV` | `229` |
-| 🇹🇷 | `TR` | `230` |
-| 🇺🇬 | `UG` | `231` |
-| 🇺🇦 | `UA` | `232` |
-| 🇦🇪 | `AE` | `233` |
-| 🇬🇧 | `GB` | `234` |
-| 🇺🇸 | `US` | `235` |
-| 🇺🇲 | `UM` | `236` |
-| 🇺🇾 | `UY` | `237` |
-| 🇺🇿 | `UZ` | `238` |
-| 🇻🇺 | `VU` | `239` |
-| 🇻🇦 | `VA` | `240` |
-| 🇻🇪 | `VE` | `241` |
-| 🇻🇳 | `VN` | `242` |
-| 🇻🇬 | `VG` | `243` |
-| 🇻🇮 | `VI` | `244` |
-| 🇼🇫 | `WF` | `245` |
-| 🇪🇭 | `EH` | `246` |
-| 🇾🇪 | `YE` | `247` |
-| 🇿🇲 | `ZM` | `248` |
-| 🇿🇼 | `ZW` | `249` |
-| 🇦🇽 | `AX` | `250` |
-| 🇮🇨 | `IC` | `251` |
+| Flag | Region Code | ID    |
+|------|-------------|-------|
+| 🇦🇫 | `AF`        | `1`   |
+| 🇦🇱 | `AL`        | `2`   |
+| 🇩🇿 | `DZ`        | `3`   |
+| 🇦🇸 | `AS`        | `4`   |
+| 🇦🇩 | `AD`        | `5`   |
+| 🇦🇴 | `AO`        | `6`   |
+| 🇦🇮 | `AI`        | `7`   |
+| 🇦🇶 | `AQ`        | `8`   |
+| 🇦🇬 | `AG`        | `9`   |
+| 🇦🇷 | `AR`        | `10`  |
+| 🇦🇲 | `AM`        | `11`  |
+| 🇦🇼 | `AW`        | `12`  |
+| 🇦🇺 | `AU`        | `13`  |
+| 🇦🇹 | `AT`        | `14`  |
+| 🇦🇿 | `AZ`        | `15`  |
+| 🇧🇸 | `BS`        | `16`  |
+| 🇧🇭 | `BH`        | `17`  |
+| 🇧🇩 | `BD`        | `18`  |
+| 🇧🇧 | `BB`        | `19`  |
+| 🇧🇾 | `BY`        | `20`  |
+| 🇧🇪 | `BE`        | `21`  |
+| 🇧🇿 | `BZ`        | `22`  |
+| 🇧🇯 | `BJ`        | `23`  |
+| 🇧🇲 | `BM`        | `24`  |
+| 🇧🇹 | `BT`        | `25`  |
+| 🇧🇴 | `BO`        | `26`  |
+| 🇧🇶 | `BQ`        | `27`  |
+| 🇧🇦 | `BA`        | `28`  |
+| 🇧🇼 | `BW`        | `29`  |
+| 🇧🇻 | `BV`        | `30`  |
+| 🇧🇷 | `BR`        | `31`  |
+| 🇮🇴 | `IO`        | `32`  |
+| 🇧🇳 | `BN`        | `33`  |
+| 🇧🇬 | `BG`        | `34`  |
+| 🇧🇫 | `BF`        | `35`  |
+| 🇧🇮 | `BI`        | `36`  |
+| 🇨🇻 | `CV`        | `37`  |
+| 🇰🇭 | `KH`        | `38`  |
+| 🇨🇲 | `CM`        | `39`  |
+| 🇨🇦 | `CA`        | `40`  |
+| 🇰🇾 | `KY`        | `41`  |
+| 🇨🇫 | `CF`        | `42`  |
+| 🇹🇩 | `TD`        | `43`  |
+| 🇨🇱 | `CL`        | `44`  |
+| 🇨🇳 | `CN`        | `45`  |
+| 🇨🇽 | `CX`        | `46`  |
+| 🇨🇨 | `CC`        | `47`  |
+| 🇨🇴 | `CO`        | `48`  |
+| 🇰🇲 | `KM`        | `49`  |
+| 🇨🇬 | `CG`        | `50`  |
+| 🇨🇰 | `CK`        | `51`  |
+| 🇨🇷 | `CR`        | `52`  |
+| 🇭🇷 | `HR`        | `53`  |
+| 🇨🇺 | `CU`        | `54`  |
+| 🇨🇼 | `CW`        | `55`  |
+| 🇨🇾 | `CY`        | `56`  |
+| 🇨🇿 | `CZ`        | `57`  |
+| 🇨🇮 | `CI`        | `58`  |
+| 🇩🇰 | `DK`        | `59`  |
+| 🇩🇯 | `DJ`        | `60`  |
+| 🇩🇲 | `DM`        | `61`  |
+| 🇩🇴 | `DO`        | `62`  |
+| 🇪🇨 | `EC`        | `63`  |
+| 🇪🇬 | `EG`        | `64`  |
+| 🇸🇻 | `SV`        | `65`  |
+| 🇬🇶 | `GQ`        | `66`  |
+| 🇪🇷 | `ER`        | `67`  |
+| 🇪🇪 | `EE`        | `68`  |
+| 🇸🇿 | `SZ`        | `69`  |
+| 🇪🇹 | `ET`        | `70`  |
+| 🇫🇰 | `FK`        | `71`  |
+| 🇫🇴 | `FO`        | `72`  |
+| 🇫🇯 | `FJ`        | `73`  |
+| 🇫🇮 | `FI`        | `74`  |
+| 🇫🇷 | `FR`        | `75`  |
+| 🇬🇫 | `GF`        | `76`  |
+| 🇵🇫 | `PF`        | `77`  |
+| 🇹🇫 | `TF`        | `78`  |
+| 🇬🇦 | `GA`        | `79`  |
+| 🇬🇲 | `GM`        | `80`  |
+| 🇬🇪 | `GE`        | `81`  |
+| 🇩🇪 | `DE`        | `82`  |
+| 🇬🇭 | `GH`        | `83`  |
+| 🇬🇮 | `GI`        | `84`  |
+| 🇬🇷 | `GR`        | `85`  |
+| 🇬🇱 | `GL`        | `86`  |
+| 🇬🇩 | `GD`        | `87`  |
+| 🇬🇵 | `GP`        | `88`  |
+| 🇬🇺 | `GU`        | `89`  |
+| 🇬🇹 | `GT`        | `90`  |
+| 🇬🇬 | `GG`        | `91`  |
+| 🇬🇳 | `GN`        | `92`  |
+| 🇬🇼 | `GW`        | `93`  |
+| 🇬🇾 | `GY`        | `94`  |
+| 🇭🇹 | `HT`        | `95`  |
+| 🇭🇲 | `HM`        | `96`  |
+| 🇭🇳 | `HN`        | `97`  |
+| 🇭🇰 | `HK`        | `98`  |
+| 🇭🇺 | `HU`        | `99`  |
+| 🇮🇸 | `IS`        | `100` |
+| 🇮🇳 | `IN`        | `101` |
+| 🇮🇩 | `ID`        | `102` |
+| 🇮🇷 | `IR`        | `103` |
+| 🇮🇶 | `IQ`        | `104` |
+| 🇮🇪 | `IE`        | `105` |
+| 🇮🇲 | `IM`        | `106` |
+| 🇮🇱 | `IL`        | `107` |
+| 🇮🇹 | `IT`        | `108` |
+| 🇯🇲 | `JM`        | `109` |
+| 🇯🇵 | `JP`        | `110` |
+| 🇯🇪 | `JE`        | `111` |
+| 🇯🇴 | `JO`        | `112` |
+| 🇰🇿 | `KZ`        | `113` |
+| 🇰🇪 | `KE`        | `114` |
+| 🇰🇮 | `KI`        | `115` |
+| 🇽🇰 | `XK`        | `116` |
+| 🇰🇼 | `KW`        | `117` |
+| 🇰🇬 | `KG`        | `118` |
+| 🇱🇦 | `LA`        | `119` |
+| 🇱🇻 | `LV`        | `120` |
+| 🇱🇧 | `LB`        | `121` |
+| 🇱🇸 | `LS`        | `122` |
+| 🇱🇷 | `LR`        | `123` |
+| 🇱🇾 | `LY`        | `124` |
+| 🇱🇮 | `LI`        | `125` |
+| 🇱🇹 | `LT`        | `126` |
+| 🇱🇺 | `LU`        | `127` |
+| 🇲🇴 | `MO`        | `128` |
+| 🇲🇬 | `MG`        | `129` |
+| 🇲🇼 | `MW`        | `130` |
+| 🇲🇾 | `MY`        | `131` |
+| 🇲🇻 | `MV`        | `132` |
+| 🇲🇱 | `ML`        | `133` |
+| 🇲🇹 | `MT`        | `134` |
+| 🇲🇭 | `MH`        | `135` |
+| 🇲🇶 | `MQ`        | `136` |
+| 🇲🇷 | `MR`        | `137` |
+| 🇲🇺 | `MU`        | `138` |
+| 🇾🇹 | `YT`        | `139` |
+| 🇲🇽 | `MX`        | `140` |
+| 🇫🇲 | `FM`        | `141` |
+| 🇲🇩 | `MD`        | `142` |
+| 🇲🇨 | `MC`        | `143` |
+| 🇲🇳 | `MN`        | `144` |
+| 🇲🇪 | `ME`        | `145` |
+| 🇲🇸 | `MS`        | `146` |
+| 🇲🇦 | `MA`        | `147` |
+| 🇲🇿 | `MZ`        | `148` |
+| 🇲🇲 | `MM`        | `149` |
+| 🇳🇦 | `NA`        | `150` |
+| 🇳🇷 | `NR`        | `151` |
+| 🇳🇵 | `NP`        | `152` |
+| 🇳🇱 | `NL`        | `153` |
+| 🇳🇨 | `NC`        | `154` |
+| 🇳🇿 | `NZ`        | `155` |
+| 🇳🇮 | `NI`        | `156` |
+| 🇳🇪 | `NE`        | `157` |
+| 🇳🇬 | `NG`        | `158` |
+| 🇳🇺 | `NU`        | `159` |
+| 🇳🇫 | `NF`        | `160` |
+| 🇰🇵 | `KP`        | `161` |
+| 🇲🇰 | `MK`        | `162` |
+| 🇲🇵 | `MP`        | `163` |
+| 🇳🇴 | `NO`        | `164` |
+| 🇴🇲 | `OM`        | `165` |
+| 🇵🇰 | `PK`        | `166` |
+| 🇵🇼 | `PW`        | `167` |
+| 🇵🇸 | `PS`        | `168` |
+| 🇵🇦 | `PA`        | `169` |
+| 🇵🇬 | `PG`        | `170` |
+| 🇵🇾 | `PY`        | `171` |
+| 🇵🇪 | `PE`        | `172` |
+| 🇵🇭 | `PH`        | `173` |
+| 🇵🇳 | `PN`        | `174` |
+| 🇵🇱 | `PL`        | `175` |
+| 🇵🇹 | `PT`        | `176` |
+| 🇵🇷 | `PR`        | `177` |
+| 🇶🇦 | `QA`        | `178` |
+| 🇨🇩 | `CD`        | `179` |
+| 🇷🇴 | `RO`        | `180` |
+| 🇷🇺 | `RU`        | `181` |
+| 🇷🇼 | `RW`        | `182` |
+| 🇷🇪 | `RE`        | `183` |
+| 🇧🇱 | `BL`        | `184` |
+| 🇸🇭 | `SH`        | `185` |
+| 🇰🇳 | `KN`        | `186` |
+| 🇱🇨 | `LC`        | `187` |
+| 🇲🇫 | `MF`        | `188` |
+| 🇵🇲 | `PM`        | `189` |
+| 🇻🇨 | `VC`        | `190` |
+| 🇼🇸 | `WS`        | `191` |
+| 🇸🇲 | `SM`        | `192` |
+| 🇸🇹 | `ST`        | `193` |
+| 🇸🇦 | `SA`        | `194` |
+| 🇸🇳 | `SN`        | `195` |
+| 🇷🇸 | `RS`        | `196` |
+| 🇸🇨 | `SC`        | `197` |
+| 🇸🇱 | `SL`        | `198` |
+| 🇸🇬 | `SG`        | `199` |
+| 🇸🇽 | `SX`        | `200` |
+| 🇸🇰 | `SK`        | `201` |
+| 🇸🇮 | `SI`        | `202` |
+| 🇸🇧 | `SB`        | `203` |
+| 🇸🇴 | `SO`        | `204` |
+| 🇿🇦 | `ZA`        | `205` |
+| 🇬🇸 | `GS`        | `206` |
+| 🇰🇷 | `KR`        | `207` |
+| 🇸🇸 | `SS`        | `208` |
+| 🇪🇸 | `ES`        | `209` |
+| 🇱🇰 | `LK`        | `210` |
+| 🇸🇩 | `SD`        | `211` |
+| 🇸🇷 | `SR`        | `212` |
+| 🇸🇯 | `SJ`        | `213` |
+| 🇸🇪 | `SE`        | `214` |
+| 🇨🇭 | `CH`        | `215` |
+| 🇸🇾 | `SY`        | `216` |
+| 🇨🇳 | `TW`        | `217` |
+| 🇹🇯 | `TJ`        | `218` |
+| 🇹🇿 | `TZ`        | `219` |
+| 🇹🇭 | `TH`        | `220` |
+| 🇹🇱 | `TL`        | `221` |
+| 🇹🇬 | `TG`        | `222` |
+| 🇹🇰 | `TK`        | `223` |
+| 🇹🇴 | `TO`        | `224` |
+| 🇹🇹 | `TT`        | `225` |
+| 🇹🇳 | `TN`        | `226` |
+| 🇹🇲 | `TM`        | `227` |
+| 🇹🇨 | `TC`        | `228` |
+| 🇹🇻 | `TV`        | `229` |
+| 🇹🇷 | `TR`        | `230` |
+| 🇺🇬 | `UG`        | `231` |
+| 🇺🇦 | `UA`        | `232` |
+| 🇦🇪 | `AE`        | `233` |
+| 🇬🇧 | `GB`        | `234` |
+| 🇺🇸 | `US`        | `235` |
+| 🇺🇲 | `UM`        | `236` |
+| 🇺🇾 | `UY`        | `237` |
+| 🇺🇿 | `UZ`        | `238` |
+| 🇻🇺 | `VU`        | `239` |
+| 🇻🇦 | `VA`        | `240` |
+| 🇻🇪 | `VE`        | `241` |
+| 🇻🇳 | `VN`        | `242` |
+| 🇻🇬 | `VG`        | `243` |
+| 🇻🇮 | `VI`        | `244` |
+| 🇼🇫 | `WF`        | `245` |
+| 🇪🇭 | `EH`        | `246` |
+| 🇾🇪 | `YE`        | `247` |
+| 🇿🇲 | `ZM`        | `248` |
+| 🇿🇼 | `ZW`        | `249` |
+| 🇦🇽 | `AX`        | `250` |
+| 🇮🇨 | `IC`        | `251` |
